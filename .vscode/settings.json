@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "CEThread_utils.c": "c",
+        "CEThread.c": "c"
+    }
+}
