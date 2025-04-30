@@ -3,6 +3,7 @@
 #define _GNU_SOURCE 
 #include <linux/sched.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include "CEThread_utils.h" 
 
 #define MAX_THREADS 50
@@ -65,6 +66,16 @@ int CEthread_detach(CEthread_t* CEthread_ptr);
 void add_thread(pid_t target, CEthread_t** CEthread_ptr);
 size_t search_target_pid(pid_t pid);
 
+// Modificar la estructura del mutex
+typedef struct CEmutex {
+    atomic_int locked;
+    pid_t owner;
+} CEmutex_t;
 
+// Funciones de mutex
+int CEmutex_init(CEmutex_t* mutex);
+int CEmutex_destroy(CEmutex_t* mutex);
+int CEmutex_lock(CEmutex_t* mutex);
+int CEmutex_unlock(CEmutex_t* mutex);
 
 #endif

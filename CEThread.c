@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <stdatomic.h>
 
 
 // Manejador de Threads
@@ -272,4 +273,60 @@ size_t search_target_pid(pid_t pid){
 
     return i;
 
+}
+
+// Inicializa un mutex
+int CEmutex_init(CEmutex_t* mutex) {
+    if (!mutex) return -1;
+    atomic_init(&mutex->locked, 0);
+    mutex->owner = 0;
+    return 0;
+}
+
+// Destruye un mutex
+int CEmutex_destroy(CEmutex_t* mutex) {
+    if (!mutex) {
+        errno = EINVAL;
+        return -1;  // Mutex inválido
+    }
+    
+    // Verificar que el mutex no esté bloqueado
+    if (atomic_load(&mutex->locked) != 0) {
+        errno = EBUSY;
+        return -1;  // Mutex aún está bloqueado
+    }
+    
+    // Verificar que no haya hilos esperando
+    if (mutex->owner != 0) {
+        errno = EBUSY;
+        return -1;  // Hay un owner asignado (indica uso reciente)
+    }
+    
+    // Limpiar la estructura
+    atomic_store(&mutex->locked, 0);
+    mutex->owner = 0;
+    
+    return 0;  // Éxito
+}
+
+// Implementación mejorada de CEmutex_lock
+int CEmutex_lock(CEmutex_t* mutex) {
+    pid_t current = getpid();
+    int expected = 0;
+    
+    // Intento atómico de adquirir el lock
+    while (!atomic_compare_exchange_strong(&mutex->locked, &expected, 1)) {
+        expected = 0;
+        CEthread_yield();
+    }
+    mutex->owner = current;
+    return 0;
+}
+
+// Implementación mejorada de CEmutex_unlock
+int CEmutex_unlock(CEmutex_t* mutex) {
+    if (mutex->owner != getpid()) return -1; // Solo el owner puede liberar
+    mutex->owner = 0;
+    atomic_store(&mutex->locked, 0);
+    return 0;
 }
