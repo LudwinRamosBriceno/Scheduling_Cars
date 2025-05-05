@@ -22,3 +22,4 @@ CEthread_t* dequeue(CEthread_queue_t* q);
 void calendarizacion_siguiente(CEthread_t** hilo_actual, CEthread_queue_t* q);
 void calendarizacion_siguiente_FCFS(CEthread_t** hilo_actual, CEthread_queue_t* q);
 void calendarizacion_siguiente_PRIORITY(CEthread_t** hilo_actual, CEthread_queue_t* q);
+void calendarizacion_siguiente_SJF(CEthread_t** hilo_actual, CEthread_queue_t* q);

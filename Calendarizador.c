@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 
-Algoritmos_calendarizacion algoritmo = PRIORITY;
+Algoritmos_calendarizacion algoritmo = SJF;
 
 ///////////////////////////////// COLA DE HILOS LISTOS //////////////////////////
 
@@ -49,6 +49,9 @@ void calendarizacion_siguiente(CEthread_t** hilo_actual_t, CEthread_queue_t* q) 
         case PRIORITY:
             calendarizacion_siguiente_PRIORITY(hilo_actual_t, q);
             break;
+        case SJF:
+            calendarizacion_siguiente_SJF(hilo_actual_t, q);
+            break;
         default:
             calendarizacion_siguiente_FCFS(hilo_actual_t, q);
     }
@@ -67,7 +70,7 @@ void calendarizacion_siguiente_FCFS(CEthread_t** hilo_actual_t, CEthread_queue_t
     }
 }
 
-// Implementación del algoritmo de prioridad
+// Implementación del algoritmo de Calendarización por Prioridad
 
 void calendarizacion_siguiente_PRIORITY(CEthread_t** hilo_actual_t, CEthread_queue_t* q) {
 
@@ -122,6 +125,50 @@ void calendarizacion_siguiente_PRIORITY(CEthread_t** hilo_actual_t, CEthread_que
     }
     
     //Activación del hilo seleccionado
+    if (*hilo_actual_t != NULL) {
+        kill((*hilo_actual_t)->thread_id, SIGCONT);
+        (*hilo_actual_t)->state = RUNNING;
+    }
+}
+
+// Implementación del algoritmo de Calendarización SJF
+
+void calendarizacion_siguiente_SJF(CEthread_t** hilo_actual_t, CEthread_queue_t* q) {
+    if (q->count <= 0) {
+        *hilo_actual_t = NULL;
+        return;
+    }
+
+    // Inicializar con el primer hilo de la cola
+    int shortest_time = q->threads[q->front]->burst_time;
+    int selected_index = q->front;
+    
+    // Comenzar la búsqueda desde el segundo hilo (si existe)
+    for (int i = 1; i < q->count; i++) {
+        int current_index = (q->front + i) % MAX_THREADS;
+        CEthread_t* current_thread = q->threads[current_index];
+        
+        if (current_thread->burst_time < shortest_time) {
+            shortest_time = current_thread->burst_time;
+            selected_index = current_index;
+        }
+    }
+
+    CEthread_t* selected_thread = q->threads[selected_index];
+    
+    if (selected_index == q->front) {
+        *hilo_actual_t = dequeue(q);
+    } else {
+        for (int i = selected_index; i != q->rear; i = (i + 1) % MAX_THREADS) {
+            q->threads[i] = q->threads[(i + 1) % MAX_THREADS];
+        }
+        
+        q->rear = (q->rear - 1 + MAX_THREADS) % MAX_THREADS;
+        q->count--;
+        
+        *hilo_actual_t = selected_thread;
+    }
+
     if (*hilo_actual_t != NULL) {
         kill((*hilo_actual_t)->thread_id, SIGCONT);
         (*hilo_actual_t)->state = RUNNING;

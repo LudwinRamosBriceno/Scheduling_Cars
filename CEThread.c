@@ -102,6 +102,21 @@ pid_t CEthread_create(CEthread_t** CEthread_ptr,
     ptr->priority = priority; 
     ptr->attributes = attr;
 
+    // Asignar el Burst Time de acuerdo con la prioridad del Hilo
+    switch(priority) {
+        case PRIORITY_EMERGENCY:
+            ptr->burst_time = EMERGENCY_TIME;
+            break;
+        case PRIORITY_SPORTS:
+            ptr->burst_time = SPORTS_TIME;
+            break;
+        case PRIORITY_NORMAL:
+            ptr->burst_time = NORMAL_TIME;
+            break;
+        default:
+            ptr->burst_time = NORMAL_TIME;
+    }
+
     //Si tenemos una estructura a la cual hacer referencia entonces actualizar el ptr
 
     if(CEthread_ptr != NULL){

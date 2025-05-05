@@ -40,6 +40,7 @@ typedef struct CEthread
     CEthread_state           state;
     CEthread_attr_t*        attributes;
     int priority;
+    int burst_time;
 } CEthread_t;
 
 // Se crea una cola para los hilos que estén listo para ejecución
@@ -93,5 +94,10 @@ int CEmutex_unlock(CEmutex_t* mutex);
 #define PRIORITY_EMERGENCY 0   // Máxima prioridad (vehículos de emergencia)
 #define PRIORITY_SPORTS    1   // Prioridad media (vehículos deportivos)
 #define PRIORITY_NORMAL    2   // Prioridad baja (vehículos normales)
+
+// Tiempos estimados para SJF (en unidades relativas)
+#define EMERGENCY_TIME 1    // Vehículos de emergencia (más rápido)
+#define SPORTS_TIME    5    // Vehículos deportivos
+#define NORMAL_TIME    10   // Vehículos normales (más lento)
 
 #endif
