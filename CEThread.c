@@ -58,7 +58,8 @@ CEthread_t* hilo_actual = NULL;    // Hilo actualmente en ejecución
 pid_t CEthread_create(CEthread_t** CEthread_ptr,
                     CEthread_attr_t** CEthread_attr, 
                     int (*target_function) (void*), 
-                    void* args)
+                    void* args,
+                    int priority)
     {
 
     sannity_check();
@@ -98,7 +99,7 @@ pid_t CEthread_create(CEthread_t** CEthread_ptr,
     //Crear una instancia de CEthread
     ptr->thread_id = thread_id;
     ptr->state = BLOCKED;
-    ptr->priority = 0; 
+    ptr->priority = priority; 
     ptr->attributes = attr;
 
     //Si tenemos una estructura a la cual hacer referencia entonces actualizar el ptr

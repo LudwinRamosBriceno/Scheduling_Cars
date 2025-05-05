@@ -23,9 +23,15 @@ int main() {
     CEmutex_init(&mutex);
     
     // Crear hilos
-    for (int i = 0; i < NUM_HILOS; i++) {
+    /* for (int i = 0; i < NUM_HILOS; i++) {
         CEthread_create(&hilos[i], NULL, incrementar, NULL);
-    }
+    } */
+
+    CEthread_create(&hilos[0], NULL, incrementar, NULL, PRIORITY_NORMAL);
+    CEthread_create(&hilos[1], NULL, incrementar, NULL, PRIORITY_SPORTS);
+    CEthread_create(&hilos[2], NULL, incrementar, NULL, PRIORITY_EMERGENCY);
+    CEthread_create(&hilos[3], NULL, incrementar, NULL, PRIORITY_NORMAL);
+    CEthread_create(&hilos[4], NULL, incrementar, NULL, PRIORITY_NORMAL);
     
     // Esperar hilos
     for (int i = 0; i < NUM_HILOS; i++) {

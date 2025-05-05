@@ -58,7 +58,8 @@ int sannity_check();
 pid_t CEthread_create(CEthread_t** CEthread_ptr,
                      CEthread_attr_t** CEthread_attr, 
                      int (*target_function) (void*), 
-                     void* args);
+                     void* args,
+                     int priority);
 
 //Sale del proceso y pone el thread como listo 
 int CEthread_end(void* args);
@@ -87,5 +88,10 @@ int CEmutex_init(CEmutex_t* mutex);
 int CEmutex_destroy(CEmutex_t* mutex);
 int CEmutex_lock(CEmutex_t* mutex);
 int CEmutex_unlock(CEmutex_t* mutex);
+
+// Esquema de Prioridades
+#define PRIORITY_EMERGENCY 0   // Máxima prioridad (vehículos de emergencia)
+#define PRIORITY_SPORTS    1   // Prioridad media (vehículos deportivos)
+#define PRIORITY_NORMAL    2   // Prioridad baja (vehículos normales)
 
 #endif
