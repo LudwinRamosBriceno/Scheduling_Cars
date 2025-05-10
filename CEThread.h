@@ -4,7 +4,8 @@
 #include <linux/sched.h>
 #include <stdlib.h>
 #include <stdatomic.h>
-#include "CEThread_utils.h" 
+#include "CEThread_utils.h"
+#include <setjmp.h>
 
 #define MAX_THREADS 50
 
@@ -41,6 +42,7 @@ typedef struct CEthread
     CEthread_attr_t*        attributes;
     int priority;
     int burst_time;
+    jmp_buf context;
 } CEthread_t;
 
 // Se crea una cola para los hilos que estén listo para ejecución

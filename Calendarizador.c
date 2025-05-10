@@ -1,11 +1,20 @@
+#define _GNU_SOURCE
 #include "Calendarizador.h"
 #include "CEThread.h"
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
+#include <string.h>
+#include <sys/time.h>  // Para struct itimerval y setitimer()
+#include <linux/sched.h>
+#include <setjmp.h>
 
 
-Algoritmos_calendarizacion algoritmo = SJF;
+struct itimerval timer;
+
+Algoritmos_calendarizacion algoritmo = ROUND_ROBIN;
+CEthread_t** hilo_actual_ref = NULL;  // necesario para el algoritmo Round Robin y tiempo real
+CEthread_queue_t* queue_ref = NULL;    // necesario para el algoritmo Round Robin y tiempo real
 
 ///////////////////////////////// COLA DE HILOS LISTOS //////////////////////////
 
@@ -13,6 +22,7 @@ void queue_init(CEthread_queue_t* q) {
     q->front = 0;
     q->rear = -1;
     q->count = 0;
+    queue_ref = q;  // se almacena una referencia a la cola (utilizada en RR y tiempo real)
 }
 
 void enqueue(CEthread_queue_t* q, CEthread_t* thread) {
@@ -22,8 +32,10 @@ void enqueue(CEthread_queue_t* q, CEthread_t* thread) {
     }
     q->rear = (q->rear + 1) % MAX_THREADS;
     q->threads[q->rear] = thread;
+    q-> threads[(q->rear + 1) % MAX_THREADS] = NULL;  // Se asegura que el siguient espacio en la cola sea nulo, pues si se alcanzan más de 50, podría haber residuos
     thread->state = READY;
     q->count++;
+
 }
 
 CEthread_t* dequeue(CEthread_queue_t* q) {
@@ -34,6 +46,7 @@ CEthread_t* dequeue(CEthread_queue_t* q) {
     q->front = (q->front + 1) % MAX_THREADS;
     q->count--;
     return thread;
+    
 }
 
 
@@ -51,6 +64,9 @@ void calendarizacion_siguiente(CEthread_t** hilo_actual_t, CEthread_queue_t* q) 
             break;
         case SJF:
             calendarizacion_siguiente_SJF(hilo_actual_t, q);
+            break;
+        case ROUND_ROBIN:
+            calendarizacion_siguiente_RR(hilo_actual_t, q);
             break;
         default:
             calendarizacion_siguiente_FCFS(hilo_actual_t, q);
@@ -174,6 +190,75 @@ void calendarizacion_siguiente_SJF(CEthread_t** hilo_actual_t, CEthread_queue_t*
         (*hilo_actual_t)->state = RUNNING;
     }
 }
+
+
+void calendarizacion_siguiente_RR(CEthread_t** hilo_actual_t, CEthread_queue_t* q){
+
+    // Se configura la calendarización al inicio
+    if (*hilo_actual_t == NULL){
+
+        timer.it_value.tv_sec = 0;          // Segundos iniciales (0)
+        timer.it_value.tv_usec = 10000;     // Microsegundos iniciales (5 ms)
+        timer.it_interval = timer.it_value; // Intervalo = Mismo valor (periódico)
+        setitimer(ITIMER_REAL, &timer, NULL); // Inicia el timer
+        //signal(SIGALRM, cambio_contexto_RR);     // Asocia SIGALRM al manejador
+
+    }
+   
+    detener_timer();
+
+    // Obtener el siguiente hilo (FIFO)
+    *hilo_actual_t = dequeue(q);
+    hilo_actual_ref = hilo_actual_t;  // Se almacena el hilo actual que servirá para el cambio de contexto
+
+    // Comenzar un nuevo hilo ejecutar
+    if (*hilo_actual_t != NULL){
+        // Se corre el hilo actual
+        (*hilo_actual_t)->state = RUNNING;
+        kill((*hilo_actual_t)->thread_id, SIGCONT);
+        reiniciar_timer();
+
+    }
+    else{
+        detener_timer();
+    }
+}
+
+void cambio_contexto_RR(){
+    
+    //  OPCIÓN 1
+    detener_timer();
+    CEthread_t *hilo_a_ejecutar = dequeue(queue_ref);
+
+    if (hilo_a_ejecutar != NULL){
+        // Se da un cambio de contexto
+        //printf("Cede: %d\n", (*hilo_actual_ref)->thread_id);
+        kill((*hilo_actual_ref)->thread_id, SIGSTOP);  // se detiene la ejecución del hilo actual, pues su tiempo (quantum) ya se acabó
+        (*hilo_actual_ref)->state = BLOCKED;
+        enqueue(queue_ref, *hilo_actual_ref);  // se agrega a la cola el hilo actual, pues todavia tiene cosas pendientes que ejecutar
+        *hilo_actual_ref = hilo_a_ejecutar;  // se cambia el hilo actual al hilo que se saca de la cola (pues se le cede el CPU)
+        (*hilo_actual_ref)->state = RUNNING;
+        //printf("Se ejecuta: %d\n", (*hilo_actual_ref)->thread_id);
+        kill((*hilo_actual_ref)->thread_id, SIGCONT);  // se comienza su ejecución
+    }
+     // Si hilo_a_ejecutar fuera NULL, no hay cambio de contexto, el hilo atual puede seguir ejecutando lo que estaba haciendo
+    reiniciar_timer();
+    
+}
+
+void detener_timer(){
+    memset(&timer, 0, sizeof(timer));  // Configura todo a 0
+    setitimer(ITIMER_REAL, &timer, NULL);  // (detiene el timer)
+}
+
+void reiniciar_timer(){
+    // Reiniciar el timer para el próximo hilo (con 5 ms)
+    timer.it_value.tv_usec = 10000;     // 5 ms
+    timer.it_interval = timer.it_value;  // Periodicidad
+    setitimer(ITIMER_REAL, &timer, NULL);  // Inicia el timer
+    signal(SIGALRM, cambio_contexto_RR);     // Asocia SIGALRM al manejador
+}
+
 
 
 // Calcular los datos de la tabla de calendarizacion para cada algoritmo (como en clase)

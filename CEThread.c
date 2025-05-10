@@ -166,9 +166,10 @@ int CEthread_end(void* args){
             // cambio del estados a terminado
             threads_ptr[i]->state = FINISHED;
             calendarizacion_siguiente(&hilo_actual, &cola_de_listo);
+            
         }
     }
-
+    
     return 0;
 }
 
@@ -201,7 +202,8 @@ int CEthread_join(CEthread_t* thread_ptr){
     // FINISHED
     while (thread_ptr->state != FINISHED){
         // Si no lo ha hecho, cede el paso a otro thread (a el mismo)
-        CEthread_yield();
+        //CEthread_yield();
+        continue;
     } 
 
 } 
@@ -339,6 +341,7 @@ int CEmutex_destroy(CEmutex_t* mutex) {
 
 // Implementación mejorada de CEmutex_lock
 int CEmutex_lock(CEmutex_t* mutex) {
+    
     pid_t current = getpid();
     int expected = 0;
     
@@ -347,14 +350,19 @@ int CEmutex_lock(CEmutex_t* mutex) {
         expected = 0;
         CEthread_yield();
     }
+    
     mutex->owner = current;
+
     return 0;
 }
 
 // Implementación mejorada de CEmutex_unlock
 int CEmutex_unlock(CEmutex_t* mutex) {
+    /*
     if (mutex->owner != getpid()) return -1; // Solo el owner puede liberar
+    */
     mutex->owner = 0;
     atomic_store(&mutex->locked, 0);
+    
     return 0;
 }
