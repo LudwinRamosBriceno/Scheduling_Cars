@@ -5,6 +5,7 @@
 #include "CEThread_utils.h"
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 int ancho_ventana = 900;
 int alto_ventana = 700;
@@ -41,6 +42,12 @@ typedef struct {
     int carros_izquierda[10];
     int num_carros_izquierda;
 } Config;
+
+
+typedef struct {
+    Carro *carro;
+    Config *config;
+} CarroArgs;
 
 
 void parse_lista_carros(char *linea, int *array, int *cantidad) {
@@ -134,7 +141,7 @@ gboolean dibujar(GtkWidget *widget, cairo_t *cr, gpointer data) {
     cairo_move_to(cr,528, altura_calle+300);    // Mueve a la posición (10, 10)
     cairo_show_text(cr, "Carril derecho");  // Dibuja el texto
 
-
+    //Dibujar carros
     for (int i = 0; i < num_carros_derecha_actual; i++) {
         switch (carros_derecha[i].tipo) {
             case 0: cairo_set_source_rgb(cr, 1, 0, 0); break;
@@ -168,10 +175,61 @@ gboolean refrescar_area(gpointer data) {
 
 
 int hilo_carro(void *arg) {
+    Carro *carro = (Carro *)arg;
+    Config *config = (Config *)arg;
+    CarroArgs *args = (CarroArgs *)arg;
+
+    // Dirección de movimiento: derecha (-x) o izquierda (+x)
+    int direccion = (carro->x > ancho_ventana / 2) ? -1 : 1;
+
+    // Velocidad base (cuanto mayor, más rápido)
+    //int velocidad;
+    switch (carro->tipo) {
+        case 0: config->velocidad_carros = 5; break;  // Emergencia (rápido)
+        case 1: config->velocidad_carros = 3; break;  // Deportivo (medio)
+        case 2: config->velocidad_carros = 1; break;  // Normal (lento)
+        default: config->velocidad_carros = 2;
+    }
+
+    for (int i = 0; i < 200; ++i) {  // Puedes ajustar el límite
+        carro->x += direccion * config->velocidad_carros;
+        g_idle_add(refrescar_area, NULL);
+        usleep(10000); // milisegundos, ajusta si es muy rápido o lento
+    }
     g_idle_add(refrescar_area, NULL); 
+
     return NULL;
 }
 
+
+
+int crear_carro(Config *config){
+
+    // DERECHA
+    num_carros_derecha_actual = config->num_carros_derecha;
+    for (int i = 0; i < num_carros_derecha_actual; i++) {
+        carros_derecha[i].tipo = config->carros_derecha[i];
+        carros_derecha[i].x = ancho_ventana - 130;  // desde la derecha
+        carros_derecha[i].y = altura_calle + i * 30;  //para distanciar uno de otro
+        CarroArgs *args = malloc(sizeof(CarroArgs));
+        args->carro = &carros_derecha[i];
+        args->config = config;
+        CEthread_create(&hilo, NULL, hilo_carro, &carros_derecha[i]);
+    }
+    
+
+    // IZQUIERDA
+    num_carros_izquierda_actual = config->num_carros_izquierda;
+    for (int i = 0; i < num_carros_izquierda_actual; i++) {
+        carros_izquierda[i].tipo = config->carros_izquierda[i];
+        carros_izquierda[i].x = 100;  // desde la izquierda
+        carros_izquierda[i].y = altura_calle + i * 30;  // un poco más abajo
+        CarroArgs *args = malloc(sizeof(CarroArgs));
+        args->carro = &carros_izquierda[i];
+        args->config = config;
+        CEthread_create(&hilo, NULL, hilo_carro, &carros_izquierda[i]);
+    }
+}
 
 
 int main(int argc, char *argv[]) {
@@ -185,23 +243,6 @@ int main(int argc, char *argv[]) {
 
     printf("largo_calle: %d\n", config.largo_calle);
 
-    // DERECHA
-    num_carros_derecha_actual = config.num_carros_derecha;
-    for (int i = 0; i < num_carros_derecha_actual; i++) {
-        carros_derecha[i].tipo = config.carros_derecha[i];
-        carros_derecha[i].x = ancho_ventana - 130;  // desde la derecha
-        carros_derecha[i].y = altura_calle + i * 30;  //para distanciar uno de otro
-        CEthread_create(&hilo, NULL, hilo_carro, &carros_derecha[i]);
-    }
-    
-    // IZQUIERDA
-    num_carros_izquierda_actual = config.num_carros_izquierda;
-    for (int i = 0; i < num_carros_izquierda_actual; i++) {
-        carros_izquierda[i].tipo = config.carros_izquierda[i];
-        carros_izquierda[i].x = 100;  // desde la izquierda
-        carros_izquierda[i].y = altura_calle + i * 30;  // un poco más abajo
-        CEthread_create(&hilo, NULL, hilo_carro, &carros_izquierda[i]);
-    }
 
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Scheduling Cars");
@@ -220,6 +261,7 @@ int main(int argc, char *argv[]) {
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
     gtk_widget_show_all(window);
+    crear_carro(&config);
     gtk_main();
 
     return 0;
