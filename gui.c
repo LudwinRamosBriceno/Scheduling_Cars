@@ -1,5 +1,7 @@
 #include <gtk/gtk.h>
 #include "CEThread.h"
+#include "CEThread.c"
+#include "CEThread_utils.c"
 #include "CEThread_utils.h"
 #include <stdio.h>
 #include <string.h>
@@ -8,6 +10,8 @@ int ancho_ventana = 900;
 int alto_ventana = 700;
 int altura_calle = 220;
 GtkWidget *area;
+GtkWidget *entry;
+GtkWidget *fixed;
 CEthread_t hilo;
 
 
@@ -18,8 +22,12 @@ typedef struct {
 } Carro;
 
 #define MAX_CARROS 10
-Carro carros[MAX_CARROS];
-int num_carros = 0;
+
+Carro carros_derecha[MAX_CARROS];
+int num_carros_derecha_actual = 0;
+
+Carro carros_izquierda[MAX_CARROS];
+int num_carros_izquierda_actual = 0;
 
 
 typedef struct {
@@ -94,17 +102,60 @@ gboolean dibujar(GtkWidget *widget, cairo_t *cr, gpointer data) {
     cairo_rectangle(cr, (ancho_ventana - config->largo_calle) / 2, altura_calle, config->largo_calle, 170);
     cairo_fill(cr);
 
-    for (int i = 0; i < num_carros; i++) {
-    switch (carros[i].tipo) {
-        case 0: cairo_set_source_rgb(cr, 1, 0, 0); break;   // rojo
-        case 1: cairo_set_source_rgb(cr, 0, 0, 1); break;   // azul
-        case 2: cairo_set_source_rgb(cr, 0, 1, 0); break;   // verde
-        default: cairo_set_source_rgb(cr, 0, 0, 0); break;  // negro
-    }
 
-    cairo_rectangle(cr, carros[i].x, carros[i].y, 30, 20);
-    cairo_fill(cr);
-}
+    cairo_set_font_size(cr, 25);  // tamaño de fuente 
+    cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
+    cairo_move_to(cr,350, altura_calle-100);    // Mueve a la posición (10, 10)
+    cairo_show_text(cr, "Scheduling Cars");  // Dibuja el texto
+
+
+    cairo_set_font_size(cr, 22);  // tamaño de fuente 
+    cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
+    cairo_move_to(cr,325, altura_calle+220);    // Mueve a la posición (10, 10)
+    cairo_show_text(cr, "Generar nuevo carro");  // Dibuja el texto
+
+    cairo_set_font_size(cr, 20);  // tamaño de fuente 
+    cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
+    cairo_move_to(cr,220, altura_calle+255);    // Mueve a la posición (10, 10)
+    cairo_show_text(cr, "Coloque 0:emergencia, 1:deportivo, 2:normal");  // Dibuja el texto
+
+    cairo_set_font_size(cr, 20);  // tamaño de fuente 
+    cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
+    cairo_move_to(cr,220, altura_calle+300);    // Mueve a la posición (10, 10)
+    cairo_show_text(cr, "Carril izquierdo");  // Dibuja el texto
+
+    cairo_set_font_size(cr, 20);  // tamaño de fuente 
+    cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
+    cairo_move_to(cr,528, altura_calle+300);    // Mueve a la posición (10, 10)
+    cairo_show_text(cr, "Carril derecho");  // Dibuja el texto
+
+
+    for (int i = 0; i < num_carros_derecha_actual; i++) {
+        switch (carros_derecha[i].tipo) {
+            case 0: cairo_set_source_rgb(cr, 1, 0, 0); break;
+             case 1: cairo_set_source_rgb(cr, 0, 0, 1); break;
+             case 2: cairo_set_source_rgb(cr, 0, 1, 0); break;
+             default: cairo_set_source_rgb(cr, 0, 0, 0); break;
+        }
+        cairo_rectangle(cr, carros_derecha[i].x, carros_derecha[i].y, 30, 20);
+        cairo_fill(cr);
+    }
+    
+    for (int i = 0; i < num_carros_izquierda_actual; i++) {
+        switch (carros_izquierda[i].tipo) {
+            case 0: cairo_set_source_rgb(cr, 1, 0, 0); break;
+            case 1: cairo_set_source_rgb(cr, 0, 0, 1); break;
+            case 2: cairo_set_source_rgb(cr, 0, 1, 0); break;
+            default: cairo_set_source_rgb(cr, 0, 0, 0); break;
+        }
+        cairo_rectangle(cr, carros_izquierda[i].x, carros_izquierda[i].y, 30, 20);
+        cairo_fill(cr);
+   }
 
     return FALSE;
 }
@@ -134,18 +185,34 @@ int main(int argc, char *argv[]) {
 
     printf("largo_calle: %d\n", config.largo_calle);
 
-    num_carros = config.num_carros_derecha;
-    for (int i = 0; i < num_carros; i++) {
-        carros[i].tipo = config.carros_derecha[i];
-        carros[i].x = 100;                    // posición fija por ahora
-        carros[i].y = altura_calle + i * 30; // fila distinta por carro
-        CEthread_create(&hilo, NULL, hilo_carro, &carros[i]);
+    // DERECHA
+    num_carros_derecha_actual = config.num_carros_derecha;
+    for (int i = 0; i < num_carros_derecha_actual; i++) {
+        carros_derecha[i].tipo = config.carros_derecha[i];
+        carros_derecha[i].x = ancho_ventana - 130;  // desde la derecha
+        carros_derecha[i].y = altura_calle + i * 30;  //para distanciar uno de otro
+        CEthread_create(&hilo, NULL, hilo_carro, &carros_derecha[i]);
+    }
+    
+    // IZQUIERDA
+    num_carros_izquierda_actual = config.num_carros_izquierda;
+    for (int i = 0; i < num_carros_izquierda_actual; i++) {
+        carros_izquierda[i].tipo = config.carros_izquierda[i];
+        carros_izquierda[i].x = 100;  // desde la izquierda
+        carros_izquierda[i].y = altura_calle + i * 30;  // un poco más abajo
+        CEthread_create(&hilo, NULL, hilo_carro, &carros_izquierda[i]);
     }
 
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Scheduling Cars");
     gtk_window_set_default_size(GTK_WINDOW(window), ancho_ventana, alto_ventana);
-    
+
+
+    // Crear el GtkEntry
+    entry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Escribe algo aquí...");
+
+
     area = gtk_drawing_area_new();
     gtk_container_add(GTK_CONTAINER(window), area);
 
@@ -157,3 +224,4 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
