@@ -43,6 +43,7 @@ typedef struct CEthread
     int priority;
     int burst_time;
     jmp_buf context;
+    short lado_calle;
 } CEthread_t;
 
 // Se crea una cola para los hilos que estén listo para ejecución
@@ -59,10 +60,11 @@ int sannity_check();
 
 // Crear  un thread
 pid_t CEthread_create(CEthread_t** CEthread_ptr,
-                     CEthread_attr_t** CEthread_attr, 
-                     int (*target_function) (void*), 
-                     void* args,
-                     int priority);
+                    CEthread_attr_t** CEthread_attr, 
+                    int (*target_function) (void*), 
+                    void* args,
+                    int priority,
+                    short lado_calle);
 
 //Sale del proceso y pone el thread como listo 
 int CEthread_end(void* args);
@@ -79,6 +81,7 @@ int CEthread_detach(CEthread_t* CEthread_ptr);
 
 void add_thread(pid_t target, CEthread_t** CEthread_ptr);
 size_t search_target_pid(pid_t pid);
+void set_lado_en_cambio_contexto_RR (short lado_calle);
 
 // Modificar la estructura del mutex
 typedef struct CEmutex {

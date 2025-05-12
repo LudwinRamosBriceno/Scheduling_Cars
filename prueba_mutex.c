@@ -5,6 +5,9 @@
 #define NUM_HILOS 3
 #define ITERACIONES 20000000
 
+#define LADO_IZQUIERDO 0
+#define LADO_DERECHO   1
+
 int contador_compartido1 = 0;
 int contador_compartido2 = 0;
 CEmutex_t mutex1;
@@ -22,10 +25,10 @@ int incrementar1() {
 
 int incrementar2() {
     for (int i = 0; i < ITERACIONES; i++) {
-        CEmutex_lock(&mutex2);  // ¡COMENTAR PARA VER EL FALLO!
+        //CEmutex_lock(&mutex2);  // ¡COMENTAR PARA VER EL FALLO!
         contador_compartido2++;
         //printf("EL contador es: %d, el indice es: %d \n", contador_compartido, i);
-        CEmutex_unlock(&mutex2); // ¡COMENTAR PARA VER EL FALLO!
+        //CEmutex_unlock(&mutex2); // ¡COMENTAR PARA VER EL FALLO!
     }
     return 0;
 }
@@ -41,11 +44,12 @@ int main() {
         CEthread_create(&hilos[i], NULL, incrementar, NULL);
     } */
 
-    CEthread_create(&hilos[0], NULL, incrementar1, NULL, PRIORITY_NORMAL);
-    CEthread_create(&hilos[1], NULL, incrementar1, NULL, PRIORITY_SPORTS);
-    CEthread_create(&hilos[2], NULL, incrementar1, NULL, PRIORITY_EMERGENCY);
-    //CEthread_create(&hilos[3], NULL, incrementar, NULL, PRIORITY_NORMAL);
-    //CEthread_create(&hilos[4], NULL, incrementar, NULL, PRIORITY_NORMAL);
+    set_lado_en_cambio_contexto_RR(LADO_DERECHO);  // Para el algoritmo RR, se necesita indicar la cola con la que se trabajará, pues tiene cambio de contexto
+    CEthread_create(&hilos[0], NULL, incrementar1, NULL, PRIORITY_NORMAL, LADO_DERECHO);
+    CEthread_create(&hilos[1], NULL, incrementar1, NULL, PRIORITY_SPORTS, LADO_DERECHO);
+    CEthread_create(&hilos[2], NULL, incrementar1, NULL, PRIORITY_EMERGENCY, LADO_DERECHO);
+    //CEthread_create(&hilos[3], NULL, incrementar2, NULL, PRIORITY_NORMAL, LADO_IZQUIERDO);
+    //CEthread_create(&hilos[4], NULL, incrementar2, NULL, PRIORITY_NORMAL, LADO_IZQUIERDO);
     
     // Esperar hilos
     for (int i = 0; i < NUM_HILOS; i++) {
@@ -66,18 +70,3 @@ int main() {
 
 // Compilar código:
 // gcc CEThread_utils.c Calendarizador.c CEThread.c prueba_mutex.c -o prueba_mutex
-
-
-
-
-/*
-Hilo creado exitosamente con ID: 26738
-Hilo creado exitosamente con ID: 26739
-Cede: 26738
-Se ejecuta: 26739
-Cede: 26739
-Se ejecuta: 26738
-Hilo con PID 26738 ha finalizado.
-Hilo con PID 26739 ha finalizado.
-Valor FINAL: 16893323 (debería ser 20000000)
-*/

@@ -3,6 +3,15 @@
         "stdio.h": "c",
         "time.h": "c",
         "signal.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "random": "c",
+        "array": "c",
+        "deque": "c",
+        "vector": "c",
+        "string_view": "c",
+        "span": "c",
+        "ranges": "c",
+        "calendarizador.h": "c",
+        "cethread.h": "c"
     }
 }

@@ -20,8 +20,11 @@ pid_t threads_pid[MAX_THREADS];
 CEthread_t* threads_ptr[MAX_THREADS];
 
 // Variables globales (o dentro de una estructura de scheduler)
-CEthread_queue_t cola_de_listo;
-CEthread_t* hilo_actual = NULL;    // Hilo actualmente en ejecución
+CEthread_queue_t cola_de_listo_izquierda;
+CEthread_queue_t cola_de_listo_derecha;
+
+CEthread_t* hilo_actual_izquierda = NULL;    // Hilo actualmente en ejecución en la cola de izquierda
+CEthread_t* hilo_actual_derecha = NULL;    // Hilo actualmente en ejecución en la cola de la derecha
 
 
 /*
@@ -45,7 +48,7 @@ CEthread_t* hilo_actual = NULL;    // Hilo actualmente en ejecución
         }
 
         isInitialized = 1;
-        queue_init(&cola_de_listo);  // Se inicializa los parámetros de la cola de hilos
+        queue_init(&cola_de_listo_izquierda, &cola_de_listo_derecha);  // Se inicializa los parámetros de la cola de hilos
 
         return 0;
     }
@@ -59,7 +62,8 @@ pid_t CEthread_create(CEthread_t** CEthread_ptr,
                     CEthread_attr_t** CEthread_attr, 
                     int (*target_function) (void*), 
                     void* args,
-                    int priority)
+                    int priority,
+                    short lado_calle)
     {
 
     sannity_check();
@@ -99,7 +103,8 @@ pid_t CEthread_create(CEthread_t** CEthread_ptr,
     //Crear una instancia de CEthread
     ptr->thread_id = thread_id;
     ptr->state = BLOCKED;
-    ptr->priority = priority; 
+    ptr->priority = priority;
+    ptr->lado_calle = lado_calle;
     ptr->attributes = attr;
 
     // Asignar el Burst Time de acuerdo con la prioridad del Hilo
@@ -131,11 +136,14 @@ pid_t CEthread_create(CEthread_t** CEthread_ptr,
     add_thread(thread_id, &ptr);
 
     // Se añade el hilo a la cola de hilos para calendarización
-    enqueue(&cola_de_listo, ptr);
+    enqueue(&cola_de_listo_izquierda, &cola_de_listo_derecha, ptr);
     
     // Si es el primer hilo que ingresa a la cola, iniciarlo
-    if (hilo_actual == NULL) {
-        calendarizacion_siguiente(&hilo_actual, &cola_de_listo);
+    if (hilo_actual_izquierda == NULL && ptr->lado_calle == LADO_IZQUIERDO) {
+        calendarizacion_siguiente(LADO_IZQUIERDO, &hilo_actual_izquierda, &cola_de_listo_izquierda, &cola_de_listo_derecha);
+    }
+    else if (hilo_actual_derecha == NULL && ptr->lado_calle == LADO_DERECHO) {
+        calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha);
     }
     
     return thread_id;
@@ -161,12 +169,24 @@ int CEthread_end(void* args){
         
         if(threads_pid[i] == pid){
             printf("Hilo con PID %d ha finalizado.\n", pid);
-           //si es -2, lo que significa es que hay memoria libre para reutilizar
+            
+            
+
+            switch (threads_ptr[i]->lado_calle){
+                case 0:
+                    calendarizacion_siguiente(LADO_IZQUIERDO, &hilo_actual_izquierda, &cola_de_listo_izquierda, &cola_de_listo_derecha);
+                    break;
+                case 1:
+                    calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha);
+                    break;
+                default:
+                    printf("Ta malo esta vaina\n");
+                    break;
+            }
+            //si es -2, lo que significa es que hay memoria libre para reutilizar
             threads_pid[i] = -2;
             // cambio del estados a terminado
             threads_ptr[i]->state = FINISHED;
-            calendarizacion_siguiente(&hilo_actual, &cola_de_listo);
-            
         }
     }
     
@@ -365,4 +385,9 @@ int CEmutex_unlock(CEmutex_t* mutex) {
     atomic_store(&mutex->locked, 0);
     
     return 0;
+}
+
+// Permite establecer la cola (izquierda o derecha) para el cambio de contexto, se debe indicar en cual cola se está dando el cambio de contexto
+void set_lado_en_cambio_contexto_RR (short lado_calle){
+    cambiar_lado_contexto_RR(lado_calle);
 }

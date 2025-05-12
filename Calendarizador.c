@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include "Calendarizador.h"
 #include "CEThread.h"
 #include <stdio.h>
@@ -6,78 +5,119 @@
 #include <unistd.h>
 #include <string.h>
 #include <sys/time.h>  // Para struct itimerval y setitimer()
-#include <linux/sched.h>
-#include <setjmp.h>
+#include <linux/sched.h> 
 
-
-struct itimerval timer;
+struct itimerval timer; // Usado solo para el algoritmo ROUND ROBIN y RM
+short lado_cambio_contexto;  // indica de la cual cola (lado de la calle) proviene o se aplica el cambio de contexto (ROUND ROBIN)
 
 Algoritmos_calendarizacion algoritmo = ROUND_ROBIN;
-CEthread_t** hilo_actual_ref = NULL;  // necesario para el algoritmo Round Robin y tiempo real
-CEthread_queue_t* queue_ref = NULL;    // necesario para el algoritmo Round Robin y tiempo real
+CEthread_t** hilo_actual_izquierda_ref = NULL;  // necesario para el algoritmo Round Robin y tiempo real
+CEthread_queue_t* queue_izquierda_ref = NULL;    // necesario para el algoritmo Round Robin y tiempo real
+CEthread_t** hilo_actual_derecha_ref = NULL;  // necesario para el algoritmo Round Robin y tiempo real
+CEthread_queue_t* queue_derecha_ref = NULL;    // necesario para el algoritmo Round Robin y tiempo real
 
 ///////////////////////////////// COLA DE HILOS LISTOS //////////////////////////
 
-void queue_init(CEthread_queue_t* q) {
-    q->front = 0;
-    q->rear = -1;
-    q->count = 0;
-    queue_ref = q;  // se almacena una referencia a la cola (utilizada en RR y tiempo real)
+void queue_init(CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha){
+    q_izquierda->front = 0;
+    q_izquierda->rear = -1;
+    q_izquierda->count = 0;
+
+    q_derecha->front = 0;
+    q_derecha->rear = -1;
+    q_derecha->count = 0;
+    queue_izquierda_ref = q_izquierda;  // se almacena una referencia a la cola (utilizada en RR y tiempo real)
+    queue_derecha_ref = q_derecha;  // se almacena una referencia a la cola (utilizada en RR y tiempo real)
 }
 
-void enqueue(CEthread_queue_t* q, CEthread_t* thread) {
-    if (q->count >= MAX_THREADS) {
+void enqueue(CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha, CEthread_t* thread){
+    if (q_izquierda->count >= MAX_THREADS && q_derecha->count >= MAX_THREADS) {
         fprintf(stderr, "Error: Cola de hilos llena\n");
         exit(EXIT_FAILURE);
     }
-    q->rear = (q->rear + 1) % MAX_THREADS;
-    q->threads[q->rear] = thread;
-    q-> threads[(q->rear + 1) % MAX_THREADS] = NULL;  // Se asegura que el siguient espacio en la cola sea nulo, pues si se alcanzan más de 50, podría haber residuos
-    thread->state = READY;
-    q->count++;
 
-}
-
-CEthread_t* dequeue(CEthread_queue_t* q) {
-    if (q->count <= 0) {
-        return NULL;  // No hay hilos listos
+    // Cuando el hilo debe ir en la cola del lado izquierdo (lado izquierdo de la calle)
+    if (thread->lado_calle == LADO_IZQUIERDO){
+        q_izquierda->rear = (q_izquierda->rear + 1) % MAX_THREADS;
+        q_izquierda->threads[q_izquierda->rear] = thread;
+        q_izquierda-> threads[(q_izquierda->rear + 1) % MAX_THREADS] = NULL;  // Se asegura que el siguient espacio en la cola sea nulo, pues si se alcanzan más de 50, podría haber residuos
+        thread->state = READY;
+        q_izquierda->count++;
     }
-    CEthread_t* thread = q->threads[q->front];
-    q->front = (q->front + 1) % MAX_THREADS;
-    q->count--;
-    return thread;
-    
+    // Cuando el hilo debe ir en la cola del lado derecho (lado izquierdo de la calle)
+    else{
+        q_derecha->rear = (q_derecha->rear + 1) % MAX_THREADS;
+        q_derecha->threads[q_derecha->rear] = thread;
+        q_derecha-> threads[(q_derecha->rear + 1) % MAX_THREADS] = NULL;  // Se asegura que el siguient espacio en la cola sea nulo, pues si se alcanzan más de 50, podría haber residuos
+        thread->state = READY;
+        q_derecha->count++;
+
+    }
+}
+
+CEthread_t* dequeue(short lado_calle, CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha){
+
+    // Se obtiene un thread de la cola de la izquierda
+    if (q_izquierda->count <= 0 && lado_calle == LADO_IZQUIERDO) {
+        return NULL;
+    }
+    else if (lado_calle == LADO_IZQUIERDO) {
+        CEthread_t* thread = q_izquierda->threads[q_izquierda->front];
+        q_izquierda->front = (q_izquierda->front + 1) % MAX_THREADS;
+        q_izquierda->count--;
+        return thread;
+    }
+
+     // Se obtiene un thread de la cola de la derecha
+    if (q_derecha->count <= 0 && lado_calle == LADO_DERECHO) {
+        return NULL;
+    }
+    else if (lado_calle == LADO_DERECHO) {
+        CEthread_t* thread = q_derecha->threads[q_derecha->front];
+        q_derecha->front = (q_derecha->front + 1) % MAX_THREADS;
+        q_derecha->count--;
+        return thread;
+    }    
 }
 
 
-////////////////////// ALGORITMOS DE CALENDARIZACION ////////////////////////////////
+//////////////////////////////////////////////// ALGORITMOS DE CALENDARIZACION ////////////////////////////////
 
 
 // Dependiendo de cual sea el algoritmo escogido por el usuario se llama dicha calendarización
-void calendarizacion_siguiente(CEthread_t** hilo_actual_t, CEthread_queue_t* q) {
+void calendarizacion_siguiente(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha){
     switch (algoritmo) {
         case FCFS:
-            calendarizacion_siguiente_FCFS(hilo_actual_t, q);
+            calendarizacion_siguiente_FCFS(lado_calle, hilo_actual_t, q_izquierda, q_derecha);
             break;
         case PRIORITY:
-            calendarizacion_siguiente_PRIORITY(hilo_actual_t, q);
+            calendarizacion_siguiente_PRIORITY(lado_calle, hilo_actual_t, q_izquierda, q_derecha);
             break;
         case SJF:
-            calendarizacion_siguiente_SJF(hilo_actual_t, q);
+            calendarizacion_siguiente_SJF(lado_calle, hilo_actual_t, q_izquierda, q_derecha);
             break;
         case ROUND_ROBIN:
-            calendarizacion_siguiente_RR(hilo_actual_t, q);
+            calendarizacion_siguiente_RR(lado_calle, hilo_actual_t, q_izquierda, q_derecha);
+        case REAL_TIME:
+
             break;
         default:
-            calendarizacion_siguiente_FCFS(hilo_actual_t, q);
+            calendarizacion_siguiente_FCFS(lado_calle, hilo_actual_t, q_izquierda, q_derecha);
     }
 }
 
-void calendarizacion_siguiente_FCFS(CEthread_t** hilo_actual_t, CEthread_queue_t* q) {
+void calendarizacion_siguiente_FCFS(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha) {
     
-    // Obtener el siguiente hilo (FIFO)
-    *hilo_actual_t = dequeue(q);
+    if (lado_calle == LADO_IZQUIERDO){
+        // Obtener el siguiente hilo (FIFO) de la cola de la izquierda
+        *hilo_actual_t = dequeue(lado_calle, q_izquierda, q_derecha);
+    }
+    else{
+        // Obtener el siguiente hilo (FIFO) de la cola de la derecho
+        *hilo_actual_t = dequeue(lado_calle, q_izquierda, q_derecha);
+    }
 
+    
     // Reanudar el nuevo hilo
     if (*hilo_actual_t != NULL){
         //printf("PASA POR AQUI ANTES DE PETAR CUANTAS VECES \n");
@@ -86,16 +126,29 @@ void calendarizacion_siguiente_FCFS(CEthread_t** hilo_actual_t, CEthread_queue_t
     }
 }
 
+
+////////////////////////////////////////////////// ALGORITMO PRIORITY ////////////////////////////////////////////
 // Implementación del algoritmo de Calendarización por Prioridad
 
-void calendarizacion_siguiente_PRIORITY(CEthread_t** hilo_actual_t, CEthread_queue_t* q) {
+void calendarizacion_siguiente_PRIORITY(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha) {
 
-    // Comprueba si no hay hilos en la cola de listos.
-    // Si la cola está vacía, devuelve NULL y termina.
-    if (q->count <= 0) {
-        *hilo_actual_t = NULL;
-        return;
+    if (lado_calle == LADO_IZQUIERDO) {
+        aux_calendarizacion_PRIORITY(lado_calle, hilo_actual_t, q_izquierda);
     }
+    else{
+        aux_calendarizacion_PRIORITY(lado_calle, hilo_actual_t, q_derecha);
+    }
+
+    //Activación del hilo seleccionado
+    if (*hilo_actual_t != NULL) {
+        kill((*hilo_actual_t)->thread_id, SIGCONT);
+        (*hilo_actual_t)->state = RUNNING;
+    }
+    
+}
+
+
+void aux_calendarizacion_PRIORITY(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q){
 
     // Inicialización de variables clave
     int lowest_priority = 3;  // Valor inicial para hacer verdadera la comparación de búsqueda
@@ -124,7 +177,7 @@ void calendarizacion_siguiente_PRIORITY(CEthread_t** hilo_actual_t, CEthread_que
     
     // Caso simple: hilo al frente (Si está al frente, lo extrae directamente.)
     if (selected_index == q->front) {
-        *hilo_actual_t = dequeue(q);
+        *hilo_actual_t = dequeue(lado_calle, q, q);  // se mandan las dos colas iguales, pero solo se usa la que se necesite (depnediendo de 'lado_calle')
     } 
     //Caso complejo: hilo en medio
     // Desplaza los elementos posteriores para "llenar el hueco"
@@ -133,23 +186,35 @@ void calendarizacion_siguiente_PRIORITY(CEthread_t** hilo_actual_t, CEthread_que
         for (int i = selected_index; i != q->rear; i = (i + 1) % MAX_THREADS) {
             q->threads[i] = q->threads[(i + 1) % MAX_THREADS];
         }
-        
         q->rear = (q->rear - 1 + MAX_THREADS) % MAX_THREADS;
         q->count--;
         
         *hilo_actual_t = selected_thread;
     }
+}
+
+
+////////////////////////////////////////////////////// ALGORITMO SJF ////////////////////////////////////////////
+// Implementación del algoritmo de Calendarización SJF
+
+void calendarizacion_siguiente_SJF(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha) {
     
-    //Activación del hilo seleccionado
+    if (lado_calle == LADO_IZQUIERDO) {
+        aux_calendarizacion_SJF(lado_calle, hilo_actual_t, q_izquierda);
+    }
+    else{
+        aux_calendarizacion_SJF(lado_calle, hilo_actual_t, q_derecha);
+    }
+
     if (*hilo_actual_t != NULL) {
         kill((*hilo_actual_t)->thread_id, SIGCONT);
         (*hilo_actual_t)->state = RUNNING;
     }
 }
 
-// Implementación del algoritmo de Calendarización SJF
-
-void calendarizacion_siguiente_SJF(CEthread_t** hilo_actual_t, CEthread_queue_t* q) {
+void aux_calendarizacion_SJF(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q){
+    
+    // necesaria para cuando ya no hay hilos que ejecutar, sino el programa no terminaría (enciclado)
     if (q->count <= 0) {
         *hilo_actual_t = NULL;
         return;
@@ -173,7 +238,8 @@ void calendarizacion_siguiente_SJF(CEthread_t** hilo_actual_t, CEthread_queue_t*
     CEthread_t* selected_thread = q->threads[selected_index];
     
     if (selected_index == q->front) {
-        *hilo_actual_t = dequeue(q);
+        *hilo_actual_t = dequeue(lado_calle, q, q);
+    
     } else {
         for (int i = selected_index; i != q->rear; i = (i + 1) % MAX_THREADS) {
             q->threads[i] = q->threads[(i + 1) % MAX_THREADS];
@@ -184,33 +250,37 @@ void calendarizacion_siguiente_SJF(CEthread_t** hilo_actual_t, CEthread_queue_t*
         
         *hilo_actual_t = selected_thread;
     }
-
-    if (*hilo_actual_t != NULL) {
-        kill((*hilo_actual_t)->thread_id, SIGCONT);
-        (*hilo_actual_t)->state = RUNNING;
-    }
 }
 
 
-void calendarizacion_siguiente_RR(CEthread_t** hilo_actual_t, CEthread_queue_t* q){
+////////////////////////////////////////////////////// ALGORITMO ROUND ROBIN ////////////////////////////////////////////
+// Implementación del algoritmo de Calendarización Round Robin
+
+void calendarizacion_siguiente_RR(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha){
 
     // Se configura la calendarización al inicio
-    if (*hilo_actual_t == NULL){
+    if (*hilo_actual_t == NULL && hilo_actual_izquierda_ref == NULL && hilo_actual_derecha_ref == NULL){
 
         timer.it_value.tv_sec = 0;          // Segundos iniciales (0)
         timer.it_value.tv_usec = 10000;     // Microsegundos iniciales (5 ms)
         timer.it_interval = timer.it_value; // Intervalo = Mismo valor (periódico)
         setitimer(ITIMER_REAL, &timer, NULL); // Inicia el timer
         //signal(SIGALRM, cambio_contexto_RR);     // Asocia SIGALRM al manejador
+        
 
     }
-   
-    detener_timer();
+    detener_timer(); // se debe de analizar, porque si una cola está en ejecución, el timer no puede detenerse
 
-    // Obtener el siguiente hilo (FIFO)
-    *hilo_actual_t = dequeue(q);
-    hilo_actual_ref = hilo_actual_t;  // Se almacena el hilo actual que servirá para el cambio de contexto
-
+    if (lado_calle == LADO_IZQUIERDO){
+        *hilo_actual_t = dequeue(lado_calle, q_izquierda, q_derecha);
+        hilo_actual_izquierda_ref = hilo_actual_t;
+    }
+    else{
+        *hilo_actual_t = dequeue(lado_calle, q_izquierda, q_derecha);
+        hilo_actual_derecha_ref = hilo_actual_t;
+    }
+    
+    
     // Comenzar un nuevo hilo ejecutar
     if (*hilo_actual_t != NULL){
         // Se corre el hilo actual
@@ -222,41 +292,65 @@ void calendarizacion_siguiente_RR(CEthread_t** hilo_actual_t, CEthread_queue_t* 
     else{
         detener_timer();
     }
+    
 }
 
 void cambio_contexto_RR(){
     
-    //  OPCIÓN 1
     detener_timer();
-    CEthread_t *hilo_a_ejecutar = dequeue(queue_ref);
+
+    if (lado_cambio_contexto == LADO_IZQUIERDO){
+        aux_cambio_contexto_RR(hilo_actual_izquierda_ref, queue_izquierda_ref);
+    }
+    else{
+        aux_cambio_contexto_RR(hilo_actual_derecha_ref, queue_derecha_ref);
+    }
+    
+     // Si hilo_a_ejecutar fuera NULL, no hay cambio de contexto, el hilo atual puede seguir ejecutando lo que estaba haciendo
+    reiniciar_timer();
+}
+
+void aux_cambio_contexto_RR(CEthread_t** hilo_actual_ref, CEthread_queue_t* queue_ref){
+    CEthread_t *hilo_a_ejecutar = dequeue(lado_cambio_contexto, queue_ref, queue_ref);
 
     if (hilo_a_ejecutar != NULL){
         // Se da un cambio de contexto
         //printf("Cede: %d\n", (*hilo_actual_ref)->thread_id);
         kill((*hilo_actual_ref)->thread_id, SIGSTOP);  // se detiene la ejecución del hilo actual, pues su tiempo (quantum) ya se acabó
         (*hilo_actual_ref)->state = BLOCKED;
-        enqueue(queue_ref, *hilo_actual_ref);  // se agrega a la cola el hilo actual, pues todavia tiene cosas pendientes que ejecutar
+        enqueue(queue_ref, queue_ref, *hilo_actual_ref);  // se agrega a la cola el hilo actual, pues todavia tiene cosas pendientes que ejecutar
         *hilo_actual_ref = hilo_a_ejecutar;  // se cambia el hilo actual al hilo que se saca de la cola (pues se le cede el CPU)
         (*hilo_actual_ref)->state = RUNNING;
         //printf("Se ejecuta: %d\n", (*hilo_actual_ref)->thread_id);
         kill((*hilo_actual_ref)->thread_id, SIGCONT);  // se comienza su ejecución
     }
-     // Si hilo_a_ejecutar fuera NULL, no hay cambio de contexto, el hilo atual puede seguir ejecutando lo que estaba haciendo
-    reiniciar_timer();
-    
 }
 
+// De tiene el timer que controla el SIGALRM
 void detener_timer(){
     memset(&timer, 0, sizeof(timer));  // Configura todo a 0
     setitimer(ITIMER_REAL, &timer, NULL);  // (detiene el timer)
 }
 
+// Reinicia el timer que controla el SIGARLM
 void reiniciar_timer(){
     // Reiniciar el timer para el próximo hilo (con 5 ms)
     timer.it_value.tv_usec = 10000;     // 5 ms
     timer.it_interval = timer.it_value;  // Periodicidad
     setitimer(ITIMER_REAL, &timer, NULL);  // Inicia el timer
     signal(SIGALRM, cambio_contexto_RR);     // Asocia SIGALRM al manejador
+}
+
+void cambiar_lado_contexto_RR (short lado_calle){
+    lado_cambio_contexto = lado_calle;  // asigna el lado de la calle (o la cola específica) al que corresponde el cambio de contexto que se va a ejecutar
+}
+
+
+////////////////////////////////////////////////////// ALGORITMO DE TIEMPO REAL RM ////////////////////////////////////////////
+// Implementación del algoritmo de Calendarización RM
+
+void calendarizacion_siguiente_REALTIME(CEthread_t** hilo_actual, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha){
+
 }
 
 
