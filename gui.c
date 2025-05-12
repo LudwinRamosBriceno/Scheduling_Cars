@@ -8,6 +8,18 @@ int ancho_ventana = 900;
 int alto_ventana = 700;
 int altura_calle = 220;
 GtkWidget *area;
+CEthread_t hilo;
+
+
+typedef struct {
+    int tipo;   // 0 = rojo, 1 = azul, 2 = verde
+    int x;
+    int y;
+} Carro;
+
+#define MAX_CARROS 10
+Carro carros[MAX_CARROS];
+int num_carros = 0;
 
 
 typedef struct {
@@ -65,7 +77,7 @@ int leer_configuracion(const char *nombre_archivo, Config *config) {
     }
 
     fclose(archivo);
-    return 1; // éxito
+    return 1; 
 }
 
 
@@ -77,13 +89,38 @@ gboolean dibujar(GtkWidget *widget, cairo_t *cr, gpointer data) {
     cairo_set_source_rgb(cr, 1, 1, 1);
     cairo_paint(cr);
 
-    // Calle negra centrada
+    // Calle negra 
     cairo_set_source_rgb(cr, 0, 0, 0);
     cairo_rectangle(cr, (ancho_ventana - config->largo_calle) / 2, altura_calle, config->largo_calle, 170);
     cairo_fill(cr);
 
+    for (int i = 0; i < num_carros; i++) {
+    switch (carros[i].tipo) {
+        case 0: cairo_set_source_rgb(cr, 1, 0, 0); break;   // rojo
+        case 1: cairo_set_source_rgb(cr, 0, 0, 1); break;   // azul
+        case 2: cairo_set_source_rgb(cr, 0, 1, 0); break;   // verde
+        default: cairo_set_source_rgb(cr, 0, 0, 0); break;  // negro
+    }
+
+    cairo_rectangle(cr, carros[i].x, carros[i].y, 30, 20);
+    cairo_fill(cr);
+}
+
     return FALSE;
 }
+
+
+gboolean refrescar_area(gpointer data) {
+    gtk_widget_queue_draw(area);
+    return G_SOURCE_REMOVE;
+}
+
+
+int hilo_carro(void *arg) {
+    g_idle_add(refrescar_area, NULL); 
+    return NULL;
+}
+
 
 
 int main(int argc, char *argv[]) {
@@ -97,6 +134,14 @@ int main(int argc, char *argv[]) {
 
     printf("largo_calle: %d\n", config.largo_calle);
 
+    num_carros = config.num_carros_derecha;
+    for (int i = 0; i < num_carros; i++) {
+        carros[i].tipo = config.carros_derecha[i];
+        carros[i].x = 100;                    // posición fija por ahora
+        carros[i].y = altura_calle + i * 30; // fila distinta por carro
+        CEthread_create(&hilo, NULL, hilo_carro, &carros[i]);
+    }
+
     GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "Scheduling Cars");
     gtk_window_set_default_size(GTK_WINDOW(window), ancho_ventana, alto_ventana);
@@ -104,7 +149,6 @@ int main(int argc, char *argv[]) {
     area = gtk_drawing_area_new();
     gtk_container_add(GTK_CONTAINER(window), area);
 
-    // PASAR LA CONFIGURACIÓN A LA FUNCIÓN DRAW
     g_signal_connect(area, "draw", G_CALLBACK(dibujar), &config);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
 
