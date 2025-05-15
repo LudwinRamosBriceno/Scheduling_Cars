@@ -120,15 +120,7 @@ void calendarizacion_siguiente_FCFS(short lado_calle, CEthread_t** hilo_actual_t
         // Obtener el siguiente hilo (FIFO) de la cola de la derecho
         *hilo_actual_t = dequeue(lado_calle, q_izquierda, q_derecha);
     }
-
-    /*
-    // Reanudar el nuevo hilo
-    if (*hilo_actual_t != NULL){
-        //printf("PASA POR AQUI ANTES DE PETAR CUANTAS VECES \n");
-        kill((*hilo_actual_t)->thread_id, SIGCONT);
-        (*hilo_actual_t)->state = RUNNING;
-    }
-    */
+    
 }
 
 
@@ -143,14 +135,6 @@ void calendarizacion_siguiente_PRIORITY(short lado_calle, CEthread_t** hilo_actu
     else{
         aux_calendarizacion_PRIORITY(lado_calle, hilo_actual_t, q_derecha);
     }
-
-    /*
-    //Activación del hilo seleccionado
-    if (*hilo_actual_t != NULL) {
-        kill((*hilo_actual_t)->thread_id, SIGCONT);
-        (*hilo_actual_t)->state = RUNNING;
-    }
-    */
 }
 
 
@@ -212,12 +196,6 @@ void calendarizacion_siguiente_SJF(short lado_calle, CEthread_t** hilo_actual_t,
         aux_calendarizacion_SJF(lado_calle, hilo_actual_t, q_derecha);
     }
 
-    /*
-    if (*hilo_actual_t != NULL) {
-        kill((*hilo_actual_t)->thread_id, SIGCONT);
-        (*hilo_actual_t)->state = RUNNING;
-    }
-    */
 }
 
 void aux_calendarizacion_SJF(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q){
@@ -273,7 +251,6 @@ void calendarizacion_siguiente_RR(short lado_calle, CEthread_t** hilo_actual_t, 
         timer.it_value.tv_usec = quantum;     // Microsegundos iniciales (10 ms = 10000 us)
         timer.it_interval = timer.it_value; // Intervalo = Mismo valor (periódico)
         setitimer(ITIMER_REAL, &timer, NULL); // Inicia el timer
-        //signal(SIGALRM, cambio_contexto_RR);     // Asocia SIGALRM al manejador
         
     }
     detener_timer(); // se debe de analizar, porque si una cola está en ejecución, el timer no puede detenerse
@@ -287,18 +264,6 @@ void calendarizacion_siguiente_RR(short lado_calle, CEthread_t** hilo_actual_t, 
         hilo_actual_derecha_ref = hilo_actual_t;
     }
 
-    /*
-    // Comenzar un nuevo hilo ejecutar
-    if (*hilo_actual_t != NULL){
-        // Se corre el hilo actual
-        (*hilo_actual_t)->state = RUNNING;
-        kill((*hilo_actual_t)->thread_id, SIGCONT);
-        reiniciar_timer();
-    }
-    else{
-        detener_timer();
-    }
-    */
 }
 
 void cambio_contexto_RR(){
@@ -314,8 +279,8 @@ void cambio_contexto_RR(){
 
     flag_hilo_actual_actualizado = 1;
     flag_RR_cambio_contexto = 1;
+
      // Si hilo_a_ejecutar fuera NULL, no hay cambio de contexto, el hilo atual puede seguir ejecutando lo que estaba haciendo
-    //reiniciar_timer();
 }
 
 void aux_cambio_contexto_RR(CEthread_t** hilo_actual_ref, CEthread_queue_t* queue_ref){
@@ -328,10 +293,6 @@ void aux_cambio_contexto_RR(CEthread_t** hilo_actual_ref, CEthread_queue_t* queu
         enqueue(queue_ref, queue_ref, *hilo_actual_ref);  // se agrega a la cola el hilo actual, pues todavia tiene cosas pendientes que ejecutar
         *hilo_actual_ref = hilo_a_ejecutar;  // se cambia el hilo actual al hilo que se saca de la cola (pues se le cede el CPU)
         
-        /*
-        (*hilo_actual_ref)->state = RUNNING;
-        kill((*hilo_actual_ref)->thread_id, SIGCONT);  // se comienza su ejecución
-        */
     }
 }
 

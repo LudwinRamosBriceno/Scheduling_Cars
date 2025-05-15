@@ -4,7 +4,7 @@
 #include "control_flujo.h"
 
 #define NUM_HILOS 5
-#define ITERACIONES 20000000
+#define ITERACIONES 200000000
 
 #define LADO_IZQUIERDO 0
 #define LADO_DERECHO   1
@@ -16,20 +16,18 @@ CEmutex_t mutex2;
 
 int incrementar1() {
     for (int i = 0; i < ITERACIONES; i++) {
-        CEmutex_lock(&mutex1);  // ¡COMENTAR PARA VER EL FALLO!
+        //CEmutex_lock(&mutex1);  // ¡COMENTAR PARA VER EL FALLO!
         contador_compartido1++;
-        //printf("EL contador es: %d, el indice es: %d \n", contador_compartido, i);
-        CEmutex_unlock(&mutex1); // ¡COMENTAR PARA VER EL FALLO!
+        //CEmutex_unlock(&mutex1); // ¡COMENTAR PARA VER EL FALLO!
     }
     return 0;
 }
 
 int incrementar2() {
     for (int i = 0; i < ITERACIONES; i++) {
-        CEmutex_lock(&mutex2);  // ¡COMENTAR PARA VER EL FALLO!
+        //CEmutex_lock(&mutex2);  // ¡COMENTAR PARA VER EL FALLO!
         contador_compartido2++;
-        //printf("EL contador es: %d, el indice es: %d \n", contador_compartido, i);
-        CEmutex_unlock(&mutex2); // ¡COMENTAR PARA VER EL FALLO!
+        //CEmutex_unlock(&mutex2); // ¡COMENTAR PARA VER EL FALLO!
     }
     return 0;
 }
@@ -37,11 +35,12 @@ int incrementar2() {
 int main() {
     CEthread_t* hilos[NUM_HILOS];  // Array de punteros
     
-    CEmutex_init(&mutex1);
-    CEmutex_init(&mutex2);
+    //CEmutex_init(&mutex1);
+    //CEmutex_init(&mutex2);
+
     short parametro_W = 2;
     int quantum = 10000;
-    short algoritmo_calendarizacion = ROUND_ROBIN;
+    short algoritmo_calendarizacion = SJF;
     set_algoritmo_calendarizacion_CEthread(algoritmo_calendarizacion);
     set_quantum_CEthread(quantum);
 
@@ -58,14 +57,16 @@ int main() {
     CEthread_t** hilo_actual_derecha = get_hilo_actual_derecha();
 
     inicializar_parametros_flujo(hilo_actual_izquierda, hilo_actual_derecha, cola_izquierda, cola_derecha);
-    control_flujo(parametro_W, 1, FLUJO_EQUIDAD, algoritmo_calendarizacion);
+    control_flujo(parametro_W, 0.2, FLUJO_LETRERO, algoritmo_calendarizacion);
     
     // Resultados
-    printf("Valor FINAL: %d (debería ser %d)\n", contador_compartido1, NUM_HILOS * ITERACIONES);
-    printf("Valor FINAL: %d (debería ser %d)\n", contador_compartido2, NUM_HILOS * ITERACIONES);
-    
-    CEmutex_destroy(&mutex1);
-    CEmutex_destroy(&mutex2);
+    //printf("Valor FINAL: %d (debería ser %d)\n", contador_compartido1, NUM_HILOS * ITERACIONES);
+    //printf("Valor FINAL: %d (debería ser %d)\n", contador_compartido2, NUM_HILOS * ITERACIONES);
+    printf("Valor FINAL: %d \n", contador_compartido1);
+    printf("Valor FINAL: %d \n", contador_compartido2);
+
+    //CEmutex_destroy(&mutex1);
+    //CEmutex_destroy(&mutex2);
     return 0;
 }
 

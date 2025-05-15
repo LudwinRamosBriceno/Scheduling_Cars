@@ -7,6 +7,7 @@
         "setjmp.h": "c",
         "cethread_utils.h": "c",
         "stdlib.h": "c",
-        "prueba2.h": "c"
+        "prueba2.h": "c",
+        "time.h": "c"
     }
 }

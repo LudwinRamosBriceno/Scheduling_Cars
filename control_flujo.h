@@ -18,9 +18,10 @@ typedef enum {
 
 void inicializar_parametros_flujo(CEthread_t** hilo_actual_izquierda, CEthread_t** hilo_actual_derecha, 
                                     CEthread_queue_t* cola_listo_izquierda, CEthread_queue_t* cola_listo_derecha);
-void control_flujo(short param_W, short tiempoLetrero, TipoFlujo algoritmoFlujo, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion);
+void control_flujo(short param_W, double tiempoLetrero, TipoFlujo algoritmoFlujo, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion);
 void equidad(short param_W, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion);
-void letrero(short tiempoLetrero);
+void letrero(double tiempoLetrero, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion);
+void letrero_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion, double tiempoLetrero);
 void FIFO();
 
 

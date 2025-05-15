@@ -1,7 +1,9 @@
+#define _GNU_SOURCE 
 #include "CEThread.h"
 #include "control_flujo.h"
 #include <signal.h>
 #include <stdio.h>
+#include <time.h>
 
 CEthread_t** hilo_actual_izquierda_flujo = NULL; // Referencia al hilo actualmente en ejecución en la cola de izquierda
 CEthread_t** hilo_actual_derecha_flujo = NULL;         // Referencia al hilo actualmente en ejecución en la cola de derecha
@@ -22,14 +24,13 @@ void inicializar_parametros_flujo(CEthread_t** hilo_actual_izquierda, CEthread_t
 
 }
 
-
-void control_flujo(short param_W, short tiempoLetrero, TipoFlujo algoritmoFlujo, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion){
+void control_flujo(short param_W, double tiempoLetrero, TipoFlujo algoritmoFlujo, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion){
     switch (algoritmoFlujo) {
         case FLUJO_EQUIDAD:
             equidad(param_W, algoritmo_calendarizacion);
             break;
         case FLUJO_LETRERO:
-            letrero(tiempoLetrero);
+            letrero(tiempoLetrero, algoritmo_calendarizacion);
             break;
         default:
             equidad(param_W, algoritmo_calendarizacion);
@@ -44,7 +45,7 @@ void equidad(short param_W, Algoritmos_calendarizacion_en_flujo algoritmo_calend
     short contador_cola1 = 0;
     short contador_cola2 = 0;
 
-    //while(cola_de_listo_izquierda_flujo->count != 0 || cola_de_listo_derecha_flujo->count != 0){
+    // bucle principal, cuando los hilos actuales de las colas son NULL, significa que ya no hay hilo en cola (se termina el programa)
     while((*hilo_actual_izquierda_flujo) != NULL || (*hilo_actual_derecha_flujo) != NULL){
         
         // Entra si es el turno de los carros de la cola de la izquierda
@@ -100,8 +101,63 @@ void equidad_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo a
 ////////////////////////////////////////////////////// ALGORITMO DE LETRERO ////////////////////////////////////////////
 
 
-void letrero(short tiempoLetrero){
+void letrero(double tiempoLetrero, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion){
+
+    short turno_cola_izq = 1; // 0 --> no puede hacer turno, 1 ---> puedder hacer turno
+    short turno_cola_der = 1;
+
+    while((*hilo_actual_izquierda_flujo) != NULL || (*hilo_actual_derecha_flujo) != NULL){
+
+        // Entra si es el turno de los carros de la cola de la izquierda
+        if ((*hilo_actual_izquierda_flujo) != NULL && turno_cola_izq == 1){
+            letrero_aux(hilo_actual_izquierda_flujo, algoritmo_calendarizacion, tiempoLetrero);
+            turno_cola_izq = 0;
+        }
+         // Entra si es el turno de los carros de la cola de la derecha
+        else if ((*hilo_actual_derecha_flujo) != NULL && turno_cola_der == 1){
+            letrero_aux(hilo_actual_derecha_flujo, algoritmo_calendarizacion, tiempoLetrero);
+            turno_cola_der = 0;
+        }
+        else{
+            // Si las dos colas ya cumplieron el tiempo, se reinician los turno para repetir el bucle
+            turno_cola_izq = 1;
+            turno_cola_der = 1;
+        }
+    }
+}
 
 
+void letrero_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion, double tiempoLetrero){
+    struct timespec start, now;
 
+    // se guarda una referencia al hilo que se está ejecutando, para cuando termine, saber su estado en el while sin que se produzca un error, pues hilo_actual cambia
+    CEthread_t* hilo_actual_temp = *hilo_actual; 
+    
+    double lapso_tiempo_letrero = 0.0;
+
+    clock_gettime(CLOCK_MONOTONIC, &start); // se toma el tiempo en este punto
+
+    while (lapso_tiempo_letrero < tiempoLetrero && (*hilo_actual) != NULL) {
+        kill(hilo_actual_temp->thread_id, SIGCONT);
+        if (*flag_cambio_contexto_RR_flujo != 1 && hilo_actual_temp->state != FINISHED){
+            usleep(1000);
+        }
+        else{
+            // Acción preventiva para asegurar que el proceso principal (este), solo continue cuando se haya terminado por completo el hilo que se estaba ejecutando y evitar lecturas no deseadas
+            while (*flag_hilo_actual_actualizado_flujo != 1){
+                usleep(1000);
+            }
+            hilo_actual_temp = *hilo_actual;  // se cambia el temp, pues el hilo actual está cambiando
+            set_flag_hilo_actual_actualizado_CEthread(0); // Se baja la  bandera para la siguiente ejecución
+        }
+
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        lapso_tiempo_letrero = (now.tv_sec - start.tv_sec) + (now.tv_nsec - start.tv_nsec) / 1e9;
+    }   
+
+    if ((*hilo_actual) != NULL){
+        printf("Se agotó el tiempo\n");
+        kill((*hilo_actual)->thread_id, SIGSTOP); // se detiene el hilo, pues es momento de ejecutar la otra cola
+        (*hilo_actual)->state = BLOCKED;
+    }
 }
