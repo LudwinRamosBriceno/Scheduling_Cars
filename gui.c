@@ -10,10 +10,18 @@
 int ancho_ventana = 900;
 int alto_ventana = 700;
 int altura_calle = 220;
+#define MAX_CARROS 10
 GtkWidget *area;
 GtkWidget *entry;
+GtkWidget *entry2;
 GtkWidget *fixed;
+GtkWidget *label;
+GtkWidget *boton;
+GtkWidget *boton2;
+
 CEthread_t hilo;
+gboolean direccion = TRUE; // FALSE: "-->", TRUE: "<--"
+
 
 
 typedef struct {
@@ -22,7 +30,6 @@ typedef struct {
     int y;
 } Carro;
 
-#define MAX_CARROS 10
 
 Carro carros_derecha[MAX_CARROS];
 int num_carros_derecha_actual = 0;
@@ -168,6 +175,25 @@ gboolean dibujar(GtkWidget *widget, cairo_t *cr, gpointer data) {
 }
 
 
+gboolean letrero(gpointer user_data) {
+    if (direccion) {
+        gtk_label_set_text(GTK_LABEL(label), "-->");
+        GdkRGBA azul;
+        gdk_rgba_parse(&azul, "blue");
+        gtk_widget_override_color(label, GTK_STATE_FLAG_NORMAL, &azul);
+    } else {
+        gtk_label_set_text(GTK_LABEL(label), "<--");
+        GdkRGBA rojo;
+        gdk_rgba_parse(&rojo, "red");
+        gtk_widget_override_color(label, GTK_STATE_FLAG_NORMAL, &rojo);
+    }
+
+    direccion = !direccion;
+    return TRUE;
+}
+
+
+
 gboolean refrescar_area(gpointer data) {
     gtk_widget_queue_draw(area);
     return G_SOURCE_REMOVE;
@@ -175,26 +201,27 @@ gboolean refrescar_area(gpointer data) {
 
 
 int hilo_carro(void *arg) {
-    Carro *carro = (Carro *)arg;
-    Config *config = (Config *)arg;
+
     CarroArgs *args = (CarroArgs *)arg;
+    Carro *carro = args->carro;
+    Config *config = args->config;
+
 
     // Dirección de movimiento: derecha (-x) o izquierda (+x)
     int direccion = (carro->x > ancho_ventana / 2) ? -1 : 1;
 
     // Velocidad base (cuanto mayor, más rápido)
-    //int velocidad;
     switch (carro->tipo) {
         case 0: config->velocidad_carros = 5; break;  // Emergencia (rápido)
         case 1: config->velocidad_carros = 3; break;  // Deportivo (medio)
-        case 2: config->velocidad_carros = 1; break;  // Normal (lento)
-        default: config->velocidad_carros = 2;
+        case 2: config->velocidad_carros = 2; break;  // Normal (lento)
+        default: config->velocidad_carros = 1;
     }
 
-    for (int i = 0; i < 200; ++i) {  // Puedes ajustar el límite
+    for (int i = 0; i < 200; ++i) {  
         carro->x += direccion * config->velocidad_carros;
         g_idle_add(refrescar_area, NULL);
-        usleep(10000); // milisegundos, ajusta si es muy rápido o lento
+        usleep(10000); // milisegundos
     }
     g_idle_add(refrescar_area, NULL); 
 
@@ -214,7 +241,9 @@ int crear_carro(Config *config){
         CarroArgs *args = malloc(sizeof(CarroArgs));
         args->carro = &carros_derecha[i];
         args->config = config;
-        CEthread_create(&hilo, NULL, hilo_carro, &carros_derecha[i]);
+        //CEthread_create(&hilo, NULL, hilo_carro, &carros_derecha[i]);
+        CEthread_create(&hilo, NULL, hilo_carro, args);
+
     }
     
 
@@ -227,7 +256,8 @@ int crear_carro(Config *config){
         CarroArgs *args = malloc(sizeof(CarroArgs));
         args->carro = &carros_izquierda[i];
         args->config = config;
-        CEthread_create(&hilo, NULL, hilo_carro, &carros_izquierda[i]);
+        //CEthread_create(&hilo, NULL, hilo_carro, &carros_izquierda[i]);
+        CEthread_create(&hilo, NULL, hilo_carro, args);
     }
 }
 
@@ -236,6 +266,7 @@ int main(int argc, char *argv[]) {
     gtk_init(&argc, &argv);
 
     static Config config;
+    static Carro carro;
 
     if (!leer_configuracion("archivo_config.txt", &config)) {
         return 1;
@@ -248,19 +279,67 @@ int main(int argc, char *argv[]) {
     gtk_window_set_title(GTK_WINDOW(window), "Scheduling Cars");
     gtk_window_set_default_size(GTK_WINDOW(window), ancho_ventana, alto_ventana);
 
-
-    // Crear el GtkEntry
-    entry = gtk_entry_new();
-    gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Escribe algo aquí...");
-
-
+    //Crear fixed
+    fixed = gtk_fixed_new();
+    gtk_container_add(GTK_CONTAINER(window), fixed);
+    
+    
+    // Área de dibujo
     area = gtk_drawing_area_new();
-    gtk_container_add(GTK_CONTAINER(window), area);
-
+    gtk_widget_set_size_request(area, 800, 600);
     g_signal_connect(area, "draw", G_CALLBACK(dibujar), &config);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    gtk_fixed_put(GTK_FIXED(fixed), area, 0, 0);  
+
+
+    // Etiqueta de letrero
+    label = gtk_label_new("");
+    gtk_widget_set_size_request(label, 50, 30);  //Tamaño
+    gtk_fixed_put(GTK_FIXED(fixed), label,420, 140);  //Posicion
+    g_timeout_add(1000, letrero, NULL);
+    
+    // Cambiar fuente y color (
+    PangoFontDescription *desc = pango_font_description_new();
+    pango_font_description_set_family(desc, "DejaVu Serif");
+    pango_font_description_set_size(desc, 30 * PANGO_SCALE); // Tamaño
+    pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD); // Negrita
+    gtk_widget_override_font(label, desc); // Aplicar fuente
+    pango_font_description_free(desc);
+    // Cambiar color a azul inicialmente
+    GdkRGBA color;
+    gdk_rgba_parse(&color, "blue");
+    gtk_widget_override_color(label, GTK_STATE_FLAG_NORMAL, &color);
+
+
+    // Entry 1 carril izquierdo
+    entry = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "0,1,2..");
+    gtk_widget_set_size_request(entry, 170, 30);  //Tamaño
+    gtk_fixed_put(GTK_FIXED(fixed), entry, 220, 540);   //Posicion
+    
+    // Entry 2 carril derecho
+    entry2 = gtk_entry_new();
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry2), "0,1,2..");
+    gtk_widget_set_size_request(entry2, 170, 30);   //Tamaño
+    gtk_fixed_put(GTK_FIXED(fixed), entry2, 528, 540);  //Posicion 
+
+
+    //Boton izquierdo 
+    GtkWidget *boton = gtk_button_new_with_label("Agregar");
+    //g_signal_connect(boton, "clicked", G_CALLBACK(mi_funcion), NULL);
+    gtk_widget_set_size_request(boton, 100, 40);   //Tamaño
+    gtk_fixed_put(GTK_FIXED(fixed), boton, 250, 580);  // X, Y
+
+
+    //Boton izquierdo 
+    GtkWidget *boton2 = gtk_button_new_with_label("Agregar");
+    //g_signal_connect(boton2, "clicked", G_CALLBACK(mi_funcion), NULL);
+    gtk_widget_set_size_request(boton2, 100, 40);   //Tamaño
+    gtk_fixed_put(GTK_FIXED(fixed), boton2, 568, 580);  // X, Y
+
 
     gtk_widget_show_all(window);
+
     crear_carro(&config);
     gtk_main();
 
