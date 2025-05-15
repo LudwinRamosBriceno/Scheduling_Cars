@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
     
     // Área de dibujo
     area = gtk_drawing_area_new();
-    gtk_widget_set_size_request(area, 800, 600);
+    gtk_widget_set_size_request(area, 900, 700);
     g_signal_connect(area, "draw", G_CALLBACK(dibujar), &config);
     g_signal_connect(window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
     gtk_fixed_put(GTK_FIXED(fixed), area, 0, 0);  
