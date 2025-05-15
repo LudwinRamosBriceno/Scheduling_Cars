@@ -120,33 +120,33 @@ gboolean dibujar(GtkWidget *widget, cairo_t *cr, gpointer data) {
     cairo_set_font_size(cr, 25);  // tamaño de fuente 
     cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
-    cairo_move_to(cr,350, altura_calle-100);    // Mueve a la posición (10, 10)
-    cairo_show_text(cr, "Scheduling Cars");  // Dibuja el texto
+    cairo_move_to(cr,350, altura_calle-100);    
+    cairo_show_text(cr, "Scheduling Cars");  
 
 
     cairo_set_font_size(cr, 22);  // tamaño de fuente 
     cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
-    cairo_move_to(cr,325, altura_calle+220);    // Mueve a la posición (10, 10)
-    cairo_show_text(cr, "Generar nuevo carro");  // Dibuja el texto
+    cairo_move_to(cr,325, altura_calle+220);   
+    cairo_show_text(cr, "Generar nuevo carro");  
 
     cairo_set_font_size(cr, 20);  // tamaño de fuente 
     cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
-    cairo_move_to(cr,220, altura_calle+255);    // Mueve a la posición (10, 10)
-    cairo_show_text(cr, "Coloque 0:emergencia, 1:deportivo, 2:normal");  // Dibuja el texto
+    cairo_move_to(cr,220, altura_calle+255);    
+    cairo_show_text(cr, "Coloque 0:emergencia, 1:deportivo, 2:normal");  
 
     cairo_set_font_size(cr, 20);  // tamaño de fuente 
     cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
-    cairo_move_to(cr,220, altura_calle+300);    // Mueve a la posición (10, 10)
-    cairo_show_text(cr, "Carril izquierdo");  // Dibuja el texto
+    cairo_move_to(cr,220, altura_calle+300);    
+    cairo_show_text(cr, "Carril izquierdo");  
 
     cairo_set_font_size(cr, 20);  // tamaño de fuente 
     cairo_select_font_face(cr, "DejaVu Serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_source_rgb(cr, 0, 0, 0);  // Color negro
-    cairo_move_to(cr,528, altura_calle+300);    // Mueve a la posición (10, 10)
-    cairo_show_text(cr, "Carril derecho");  // Dibuja el texto
+    cairo_move_to(cr,528, altura_calle+300);    
+    cairo_show_text(cr, "Carril derecho");  
 
     //Dibujar carros
     for (int i = 0; i < num_carros_derecha_actual; i++) {
@@ -246,7 +246,6 @@ int crear_carro(Config *config){
 
     }
     
-
     // IZQUIERDA
     num_carros_izquierda_actual = config->num_carros_izquierda;
     for (int i = 0; i < num_carros_izquierda_actual; i++) {
@@ -259,6 +258,19 @@ int crear_carro(Config *config){
         //CEthread_create(&hilo, NULL, hilo_carro, &carros_izquierda[i]);
         CEthread_create(&hilo, NULL, hilo_carro, args);
     }
+}
+
+
+void nuevos_izquierda(GtkButton *boton, gpointer user_data) {
+    GtkEntry *entry = GTK_ENTRY(user_data);       
+    const gchar *texto = gtk_entry_get_text(entry);
+    g_print("Texto ingresado: %s\n", texto);
+}
+
+void nuevos_derecha(GtkButton *boton2, gpointer user_data) {
+    GtkEntry *entry2 = GTK_ENTRY(user_data);       
+    const gchar *texto2 = gtk_entry_get_text(entry2);
+    g_print("Texto ingresado: %s\n", texto2);
 }
 
 
@@ -326,14 +338,14 @@ int main(int argc, char *argv[]) {
 
     //Boton izquierdo 
     GtkWidget *boton = gtk_button_new_with_label("Agregar");
-    //g_signal_connect(boton, "clicked", G_CALLBACK(mi_funcion), NULL);
+    g_signal_connect(boton, "clicked", G_CALLBACK(nuevos_izquierda), entry);
     gtk_widget_set_size_request(boton, 100, 40);   //Tamaño
     gtk_fixed_put(GTK_FIXED(fixed), boton, 250, 580);  // X, Y
 
 
     //Boton izquierdo 
     GtkWidget *boton2 = gtk_button_new_with_label("Agregar");
-    //g_signal_connect(boton2, "clicked", G_CALLBACK(mi_funcion), NULL);
+    g_signal_connect(boton2, "clicked", G_CALLBACK(nuevos_derecha), entry2);
     gtk_widget_set_size_request(boton2, 100, 40);   //Tamaño
     gtk_fixed_put(GTK_FIXED(fixed), boton2, 568, 580);  // X, Y
 
