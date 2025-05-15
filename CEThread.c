@@ -429,3 +429,14 @@ short* get_flag_hilo_actual_actualizado_CEthread(){
 void set_flag_hilo_actual_actualizado_CEthread(short flag){
     set_flag_hilo_actual_actualizado(flag);
 }
+
+void set_quantum_CEthread(int valor_quantum){
+    set_quantum(valor_quantum);
+}
+
+volatile short* get_flag_cambio_contexto_CEthread(){
+    return get_flag_cambio_contexto();
+}
+void set_flag_cambio_contexto_CEthread(short flag_cambio_contexto){
+    set_flag_cambio_contexto(flag_cambio_contexto);
+}

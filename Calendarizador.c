@@ -16,6 +16,8 @@ CEthread_queue_t* queue_izquierda_ref = NULL;    // necesario para el algoritmo 
 CEthread_t** hilo_actual_derecha_ref = NULL;  // necesario para el algoritmo Round Robin y tiempo real
 CEthread_queue_t* queue_derecha_ref = NULL;    // necesario para el algoritmo Round Robin y tiempo real
 short flag_hilo_actual_actualizado = 0;
+int quantum = 1;
+volatile short flag_RR_cambio_contexto = 0;
 
 ///////////////////////////////// COLA DE HILOS LISTOS //////////////////////////
 
@@ -99,6 +101,7 @@ void calendarizacion_siguiente(short lado_calle, CEthread_t** hilo_actual_t, CEt
             break;
         case ROUND_ROBIN:
             calendarizacion_siguiente_RR(lado_calle, hilo_actual_t, q_izquierda, q_derecha);
+            break;
         case REAL_TIME:
 
             break;
@@ -267,7 +270,7 @@ void calendarizacion_siguiente_RR(short lado_calle, CEthread_t** hilo_actual_t, 
     if (*hilo_actual_t == NULL && hilo_actual_izquierda_ref == NULL && hilo_actual_derecha_ref == NULL){
 
         timer.it_value.tv_sec = 0;          // Segundos iniciales (0)
-        timer.it_value.tv_usec = 10000;     // Microsegundos iniciales (5 ms)
+        timer.it_value.tv_usec = quantum;     // Microsegundos iniciales (10 ms = 10000 us)
         timer.it_interval = timer.it_value; // Intervalo = Mismo valor (periódico)
         setitimer(ITIMER_REAL, &timer, NULL); // Inicia el timer
         //signal(SIGALRM, cambio_contexto_RR);     // Asocia SIGALRM al manejador
@@ -310,6 +313,7 @@ void cambio_contexto_RR(){
     }
 
     flag_hilo_actual_actualizado = 1;
+    flag_RR_cambio_contexto = 1;
      // Si hilo_a_ejecutar fuera NULL, no hay cambio de contexto, el hilo atual puede seguir ejecutando lo que estaba haciendo
     //reiniciar_timer();
 }
@@ -339,8 +343,9 @@ void detener_timer(){
 
 // Reinicia el timer que controla el SIGARLM
 void reiniciar_timer(){
-    // Reiniciar el timer para el próximo hilo (con 5 ms)
-    timer.it_value.tv_usec = 10000;     // 5 ms
+    // Reiniciar el timer para el próximo hilo (con 10 ms)
+    timer.it_value.tv_sec = 0; 
+    timer.it_value.tv_usec = quantum;     // 10 ms
     timer.it_interval = timer.it_value;  // Periodicidad
     setitimer(ITIMER_REAL, &timer, NULL);  // Inicia el timer
     signal(SIGALRM, cambio_contexto_RR);     // Asocia SIGALRM al manejador
@@ -360,6 +365,18 @@ short* get_flag_hilo_actual_actualizado(){
 
 void set_flag_hilo_actual_actualizado(short flag){
     flag_hilo_actual_actualizado = flag;
+}
+
+void set_quantum(int valor_quantum){
+    quantum = valor_quantum;
+}
+
+volatile short* get_flag_cambio_contexto(){
+    return &flag_RR_cambio_contexto;
+}
+
+void set_flag_cambio_contexto(short flag_cambio_contexto){
+    flag_RR_cambio_contexto = flag_cambio_contexto;
 }
 
 ////////////////////////////////////////////////////// ALGORITMO DE TIEMPO REAL RM ////////////////////////////////////////////

@@ -8,6 +8,7 @@ CEthread_t** hilo_actual_derecha_flujo = NULL;         // Referencia al hilo act
 CEthread_queue_t* cola_de_listo_izquierda_flujo = NULL;  // referencia a la cola izquierda del calendarizador 
 CEthread_queue_t* cola_de_listo_derecha_flujo = NULL;    // referencia a la cola derecha del calendarizador
 short* flag_hilo_actual_actualizado_flujo = NULL;
+volatile short* flag_cambio_contexto_RR_flujo = NULL;
 
 
 void inicializar_parametros_flujo(CEthread_t** hilo_actual_izquierda, CEthread_t** hilo_actual_derecha,
@@ -17,15 +18,18 @@ void inicializar_parametros_flujo(CEthread_t** hilo_actual_izquierda, CEthread_t
     cola_de_listo_izquierda_flujo = cola_listo_izquierda;
     cola_de_listo_derecha_flujo = cola_listo_derecha;
     flag_hilo_actual_actualizado_flujo = get_flag_hilo_actual_actualizado_CEthread();
+    flag_cambio_contexto_RR_flujo = get_flag_cambio_contexto_CEthread();
 
 }
 
 
-
-void control_flujo(short param_W, TipoFlujo algoritmoFlujo, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion){
+void control_flujo(short param_W, short tiempoLetrero, TipoFlujo algoritmoFlujo, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion){
     switch (algoritmoFlujo) {
         case FLUJO_EQUIDAD:
             equidad(param_W, algoritmo_calendarizacion);
+            break;
+        case FLUJO_LETRERO:
+            letrero(tiempoLetrero);
             break;
         default:
             equidad(param_W, algoritmo_calendarizacion);
@@ -65,19 +69,20 @@ void equidad_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo a
 
     (*hilo_actual)->state = RUNNING;  // se actualiza el estado del hilo en ejecutandose
     
+    // se guarda una referencia al hilo que se está ejecutando, para cuando termine, saber su estado en el while sin que se produzca un error, pues hilo_actual cambia
+    CEthread_t* hilo_actual_temp = *hilo_actual; 
+
     // Si el algoritmo es RR, entonces cada vez que se coloca a ejeucutar un hilo se reinicia el quantum
     if (algoritmo_calendarizacion == ROUND_ROBIN){
         set_lado_en_cambio_contexto_RR((*hilo_actual)->lado_calle);  // se coloca en qué cola se realiza el cambio de contexto
+        set_flag_cambio_contexto_CEthread(0);
         set_reiniciar_timer_RR();
     }
-
-    // se guarda una referencia al hilo que se está ejecutando, para cuando termine, saber su estado en el while sin que se produzca un error, pues hilo_actual cambia
-    CEthread_t* hilo_actual_temp = *hilo_actual; 
 
     kill((*hilo_actual)->thread_id, SIGCONT); // pone a ejecutar el hilo
 
     // Se sale hasta que halla un cambio de contexto o que el hilo haya finalizado
-    while (hilo_actual_temp->state != BLOCKED && hilo_actual_temp->state != FINISHED){
+    while (*flag_cambio_contexto_RR_flujo != 1 && hilo_actual_temp->state != FINISHED){
         usleep(1000);
     }
     
@@ -95,8 +100,8 @@ void equidad_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo a
 ////////////////////////////////////////////////////// ALGORITMO DE LETRERO ////////////////////////////////////////////
 
 
-void letrero(){
-    
+void letrero(short tiempoLetrero){
+
 
 
 }

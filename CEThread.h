@@ -91,7 +91,9 @@ CEthread_t** get_hilo_actual_izquierda();
 CEthread_t** get_hilo_actual_derecha();
 short* get_flag_hilo_actual_actualizado_CEthread();
 void set_flag_hilo_actual_actualizado_CEthread(short flag);
-    
+void set_quantum_CEthread(int valor_quantum);
+volatile short* get_flag_cambio_contexto_CEthread();
+void set_flag_cambio_contexto_CEthread(short flag_cambio_contexto);
 
 // Modificar la estructura del mutex
 typedef struct CEmutex {

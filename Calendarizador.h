@@ -48,6 +48,9 @@ void cambiar_lado_contexto_RR (short lado_calle);
 void set_algoritmo_calendarizacion(Algoritmos_calendarizacion algoritmo);
 short* get_flag_hilo_actual_actualizado();
 void set_flag_hilo_actual_actualizado(short flag);
+void set_quantum(int valor_quantum);
+volatile short* get_flag_cambio_contexto();
+void set_flag_cambio_contexto(short flag_cambio_contexto);
 
 
 #endif
