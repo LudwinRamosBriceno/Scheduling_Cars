@@ -12,24 +12,27 @@ typedef enum {
     REAL_TIME
 } Algoritmos_calendarizacion;
 
-void queue_init(CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha);
+void queue_init(CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
 
-void enqueue(CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha, CEthread_t* thread);
+void enqueue(CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha, CEthread_queue_t* q_global, CEthread_t* thread);
 
-CEthread_t* dequeue(short lado_calle,CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha);
+CEthread_t* dequeue(short lado_calle,CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
 
 // Lado de la calle (en unidades relativas)
 #define LADO_IZQUIERDO 0   
-#define LADO_DERECHO   1    
+#define LADO_DERECHO   1 
+
+#define LADO_GENERAL_IZQUIERDO 2   
+#define LADO_GENERAL_DERECHO   3      
 
 ////////////////////// ALGORITMOS DE CALENDARIZACION ////////////////////////////////
 
-void calendarizacion_siguiente(short lado_calle,CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha);
-void calendarizacion_siguiente_FCFS(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha);
-void calendarizacion_siguiente_PRIORITY(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha);
-void calendarizacion_siguiente_SJF(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha);
-void calendarizacion_siguiente_RR(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha);
-void calendarizacion_siguiente_REALTIME(CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha);
+void calendarizacion_siguiente(short lado_calle,CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
+void calendarizacion_siguiente_FCFS(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
+void calendarizacion_siguiente_PRIORITY(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
+void calendarizacion_siguiente_SJF(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
+void calendarizacion_siguiente_RR(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
+void calendarizacion_siguiente_REALTIME(CEthread_t** hilo_actual_t, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha, CEthread_queue_t* q_global);
 
 // Funciones propias del algoritmo FCFS
 void aux_calendarizacion_SJF(short lado_calle, CEthread_t** hilo_actual_t, CEthread_queue_t* q);

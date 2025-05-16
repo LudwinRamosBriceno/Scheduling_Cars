@@ -23,8 +23,12 @@ CEthread_t* threads_ptr[MAX_THREADS];
 CEthread_queue_t cola_de_listo_izquierda;
 CEthread_queue_t cola_de_listo_derecha;
 
+// Cola General
+CEthread_queue_t cola_de_listo_general;
+
 CEthread_t* hilo_actual_izquierda = NULL;    // Hilo actualmente en ejecución en la cola de izquierda
 CEthread_t* hilo_actual_derecha = NULL;    // Hilo actualmente en ejecución en la cola de la derecha
+CEthread_t* hilo_actual_global = NULL;    // Hilo actualmente en ejecución en la cola global
 
 
 
@@ -49,7 +53,7 @@ CEthread_t* hilo_actual_derecha = NULL;    // Hilo actualmente en ejecución en 
         }
 
         isInitialized = 1;
-        queue_init(&cola_de_listo_izquierda, &cola_de_listo_derecha);  // Se inicializa los parámetros de la cola de hilos
+        queue_init(&cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);  // Se inicializa los parámetros de la cola de hilos
 
         return 0;
     }
@@ -137,14 +141,17 @@ pid_t CEthread_create(CEthread_t** CEthread_ptr,
     add_thread(thread_id, &ptr);
 
     // Se añade el hilo a la cola de hilos para calendarización
-    enqueue(&cola_de_listo_izquierda, &cola_de_listo_derecha, ptr);
+    enqueue(&cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general, ptr);
     
     // Si es el primer hilo que ingresa a la cola, iniciarlo
     if (hilo_actual_izquierda == NULL && ptr->lado_calle == LADO_IZQUIERDO) {
-        calendarizacion_siguiente(LADO_IZQUIERDO, &hilo_actual_izquierda, &cola_de_listo_izquierda, &cola_de_listo_derecha);
+        calendarizacion_siguiente(LADO_IZQUIERDO, &hilo_actual_izquierda, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
     }
     else if (hilo_actual_derecha == NULL && ptr->lado_calle == LADO_DERECHO) {
-        calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha);
+        calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
+    }
+    else if (hilo_actual_global == NULL && (ptr->lado_calle == LADO_GENERAL_DERECHO || ptr->lado_calle == LADO_GENERAL_IZQUIERDO)) {
+        calendarizacion_siguiente(LADO_GENERAL_DERECHO, &hilo_actual_global, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
     }
     
     return thread_id;
@@ -179,10 +186,16 @@ int CEthread_end(void* args){
             
             switch (threads_ptr[i]->lado_calle){
                 case 0:
-                    calendarizacion_siguiente(LADO_IZQUIERDO, &hilo_actual_izquierda, &cola_de_listo_izquierda, &cola_de_listo_derecha);
+                    calendarizacion_siguiente(LADO_IZQUIERDO, &hilo_actual_izquierda, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
                     break;
                 case 1:
-                    calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha);
+                    calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
+                    break;
+                case 2:
+                    calendarizacion_siguiente(LADO_GENERAL_IZQUIERDO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
+                    break;
+                case 3:
+                    calendarizacion_siguiente(LADO_GENERAL_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
                     break;
                 default:
                     printf("Ta malo esta vaina\n");
