@@ -24,10 +24,7 @@ void letrero(double tiempoLetrero, Algoritmos_calendarizacion_en_flujo algoritmo
 void letrero_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion, double tiempoLetrero);
 void FIFO();
 
-
 void equidad_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo algoritmo_calendarizacion);
 
 
 #endif
-
-

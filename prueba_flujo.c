@@ -35,12 +35,12 @@ int incrementar2() {
 int main() {
     CEthread_t* hilos[NUM_HILOS];  // Array de punteros
     
-    //CEmutex_init(&mutex1);
-    //CEmutex_init(&mutex2);
+    CEmutex_init(&mutex1);
+    CEmutex_init(&mutex2);
 
     short parametro_W = 2;
     int quantum = 10000;
-    short algoritmo_calendarizacion = SJF;
+    short algoritmo_calendarizacion = PRIORITY;
     set_algoritmo_calendarizacion_CEthread(algoritmo_calendarizacion);
     set_quantum_CEthread(quantum);
 
@@ -60,13 +60,11 @@ int main() {
     control_flujo(parametro_W, 0.2, FLUJO_LETRERO, algoritmo_calendarizacion);
     
     // Resultados
-    //printf("Valor FINAL: %d (debería ser %d)\n", contador_compartido1, NUM_HILOS * ITERACIONES);
-    //printf("Valor FINAL: %d (debería ser %d)\n", contador_compartido2, NUM_HILOS * ITERACIONES);
     printf("Valor FINAL: %d \n", contador_compartido1);
     printf("Valor FINAL: %d \n", contador_compartido2);
 
-    //CEmutex_destroy(&mutex1);
-    //CEmutex_destroy(&mutex2);
+    CEmutex_destroy(&mutex1);
+    CEmutex_destroy(&mutex2);
     return 0;
 }
 

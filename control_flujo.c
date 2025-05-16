@@ -37,7 +37,6 @@ void control_flujo(short param_W, double tiempoLetrero, TipoFlujo algoritmoFlujo
     }
 }
 
-
 ////////////////////////////////////////////////////// ALGORITMO DE EQUIDAD ////////////////////////////////////////////
 
 
@@ -138,10 +137,13 @@ void letrero_aux(CEthread_t** hilo_actual, Algoritmos_calendarizacion_en_flujo a
     clock_gettime(CLOCK_MONOTONIC, &start); // se toma el tiempo en este punto
 
     while (lapso_tiempo_letrero < tiempoLetrero && (*hilo_actual) != NULL) {
-        kill(hilo_actual_temp->thread_id, SIGCONT);
+        kill(hilo_actual_temp->thread_id, SIGCONT);  //se pone a correr el hilo
+
+        // Entra aquí si el hilo se está ejecutando
         if (*flag_cambio_contexto_RR_flujo != 1 && hilo_actual_temp->state != FINISHED){
-            usleep(1000);
+            usleep(1000); 
         }
+        // Entra aquí para cuando el hilo ya ha terminando o hay un cambio de contexto
         else{
             // Acción preventiva para asegurar que el proceso principal (este), solo continue cuando se haya terminado por completo el hilo que se estaba ejecutando y evitar lecturas no deseadas
             while (*flag_hilo_actual_actualizado_flujo != 1){

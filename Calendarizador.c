@@ -10,7 +10,7 @@
 struct itimerval timer; // Usado solo para el algoritmo ROUND ROBIN y RM
 short lado_cambio_contexto;  // indica de la cual cola (lado de la calle) proviene o se aplica el cambio de contexto (ROUND ROBIN)
 
-Algoritmos_calendarizacion algoritmo_calendarizacion = ROUND_ROBIN;
+Algoritmos_calendarizacion algoritmo_calendarizacion = FCFS;
 CEthread_t** hilo_actual_izquierda_ref = NULL;  // necesario para el algoritmo Round Robin y tiempo real
 CEthread_queue_t* queue_izquierda_ref = NULL;    // necesario para el algoritmo Round Robin y tiempo real
 CEthread_t** hilo_actual_derecha_ref = NULL;  // necesario para el algoritmo Round Robin y tiempo real
@@ -46,8 +46,6 @@ void enqueue(CEthread_queue_t* q_izquierda, CEthread_queue_t* q_derecha, CEthrea
         fprintf(stderr, "Error: Cola de hilos llena\n");
         exit(EXIT_FAILURE);
     }
-
-    
 
     // Cuando el hilo debe ir en la cola del lado izquierdo (lado izquierdo de la calle)
     if (thread->lado_calle == LADO_IZQUIERDO){
