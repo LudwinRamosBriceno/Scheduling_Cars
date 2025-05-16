@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdatomic.h>
 #include "CEThread_utils.h"
-#include <setjmp.h>
 
 #define MAX_THREADS 50
 
@@ -42,7 +41,6 @@ typedef struct CEthread
     CEthread_attr_t*        attributes;
     int priority;
     int burst_time;
-    jmp_buf context;
     short lado_calle;
 } CEthread_t;
 
