@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "cethread.c": "c",
+        "stdio.h": "c",
+        "cethread_utils.h": "c"
+    }
+}
