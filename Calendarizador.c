@@ -102,7 +102,6 @@ CEthread_t* dequeue(short lado_calle, CEthread_queue_t* q_izquierda, CEthread_qu
         return NULL;
     }
     else {
-        printf("Buenas tardes muchachon\n");
         CEthread_t* thread = q_global->threads[q_global->front];
         q_global->front = (q_global->front + 1) % MAX_THREADS;
         q_global->count--;
@@ -134,6 +133,7 @@ void calendarizacion_siguiente(short lado_calle, CEthread_t** hilo_actual_t, CEt
             break;
         default:
             calendarizacion_siguiente_FCFS(lado_calle, hilo_actual_t, q_izquierda, q_derecha, q_global);
+            break;
     }
 }
 
@@ -391,8 +391,6 @@ void set_flag_cambio_contexto(short flag_cambio_contexto){
 void calendarizacion_siguiente_REALTIME(CEthread_t** hilo_actual, CEthread_queue_t* q_izquierda,  CEthread_queue_t* q_derecha, CEthread_queue_t* q_global){
 
 }
-
-
 
 // Calcular los datos de la tabla de calendarizacion para cada algoritmo (como en clase)
 // https://github.com/AugustineAykara/CPU-Scheduling-Algorithm-In-C

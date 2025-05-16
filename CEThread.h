@@ -87,13 +87,16 @@ void set_reiniciar_timer_RR();
 void set_algoritmo_calendarizacion_CEthread(short algoritmo);
 CEthread_queue_t* get_cola_izquierda();
 CEthread_queue_t* get_cola_derecha();
+CEthread_queue_t* get_cola_general();
 CEthread_t** get_hilo_actual_izquierda();
 CEthread_t** get_hilo_actual_derecha();
+CEthread_t** get_hilo_actual_general();
 short* get_flag_hilo_actual_actualizado_CEthread();
 void set_flag_hilo_actual_actualizado_CEthread(short flag);
 void set_quantum_CEthread(int valor_quantum);
 volatile short* get_flag_cambio_contexto_CEthread();
 void set_flag_cambio_contexto_CEthread(short flag_cambio_contexto);
+
 
 // Modificar la estructura del mutex
 typedef struct CEmutex {

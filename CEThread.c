@@ -28,7 +28,7 @@ CEthread_queue_t cola_de_listo_general;
 
 CEthread_t* hilo_actual_izquierda = NULL;    // Hilo actualmente en ejecución en la cola de izquierda
 CEthread_t* hilo_actual_derecha = NULL;    // Hilo actualmente en ejecución en la cola de la derecha
-CEthread_t* hilo_actual_global = NULL;    // Hilo actualmente en ejecución en la cola global
+CEthread_t* hilo_actual_general = NULL;    // Hilo actualmente en ejecución en la cola global
 
 
 
@@ -150,8 +150,8 @@ pid_t CEthread_create(CEthread_t** CEthread_ptr,
     else if (hilo_actual_derecha == NULL && ptr->lado_calle == LADO_DERECHO) {
         calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
     }
-    else if (hilo_actual_global == NULL && (ptr->lado_calle == LADO_GENERAL_DERECHO || ptr->lado_calle == LADO_GENERAL_IZQUIERDO)) {
-        calendarizacion_siguiente(LADO_GENERAL_DERECHO, &hilo_actual_global, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
+    else if (hilo_actual_general == NULL && (ptr->lado_calle == LADO_GENERAL_DERECHO || ptr->lado_calle == LADO_GENERAL_IZQUIERDO)) {
+        calendarizacion_siguiente(LADO_GENERAL_DERECHO, &hilo_actual_general, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
     }
     
     return thread_id;
@@ -192,10 +192,10 @@ int CEthread_end(void* args){
                     calendarizacion_siguiente(LADO_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
                     break;
                 case 2:
-                    calendarizacion_siguiente(LADO_GENERAL_IZQUIERDO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
+                    calendarizacion_siguiente(LADO_GENERAL_IZQUIERDO, &hilo_actual_general, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
                     break;
                 case 3:
-                    calendarizacion_siguiente(LADO_GENERAL_DERECHO, &hilo_actual_derecha, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
+                    calendarizacion_siguiente(LADO_GENERAL_DERECHO, &hilo_actual_general, &cola_de_listo_izquierda, &cola_de_listo_derecha, &cola_de_listo_general);
                     break;
                 default:
                     printf("Ta malo esta vaina\n");
@@ -204,7 +204,6 @@ int CEthread_end(void* args){
         }
     }
     set_flag_hilo_actual_actualizado_CEthread(1);
-
     return 0;
 }
 
@@ -427,12 +426,20 @@ CEthread_queue_t* get_cola_derecha(){
     return &cola_de_listo_derecha;
 }
 
+CEthread_queue_t* get_cola_general(){
+    return &cola_de_listo_general;
+}
+
 CEthread_t** get_hilo_actual_izquierda(){
     return &hilo_actual_izquierda;
 }
 
 CEthread_t** get_hilo_actual_derecha(){
     return &hilo_actual_derecha;
+}
+
+CEthread_t** get_hilo_actual_general(){
+    return &hilo_actual_general;
 }
 
 short* get_flag_hilo_actual_actualizado_CEthread(){
