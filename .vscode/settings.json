@@ -1,6 +1,5 @@
 {
     "files.associations": {
-
         "control_flujo.C": "cpp",
         "types.h": "c",
         "unistd.h": "c",
@@ -10,8 +9,5 @@
         "stdlib.h": "c",
         "prueba2.h": "c",
         "time.h": "c"
-        "cethread.c": "c",
-        "stdio.h": "c",
-        "cethread_utils.h": "c"
     }
 }

@@ -1,9 +1,0 @@
-W: 
-tiempo_letrero: 3000
-cantidad_carros: 
-velocidad_carros:100
-largo_calle: 550
-metodo_control_flujo:
-carros_derecha: 1
-carros_izquierda: 
-
