@@ -225,6 +225,8 @@ int hilo_carro(void *arg) {
     }
     g_idle_add(refrescar_area, NULL); 
 
+    free(arg);
+
     return NULL;
 }
 
@@ -260,18 +262,68 @@ int crear_carro(Config *config){
     }
 }
 
-
+/*
 void nuevos_izquierda(GtkButton *boton, gpointer user_data) {
     GtkEntry *entry = GTK_ENTRY(user_data);       
     const gchar *texto = gtk_entry_get_text(entry);
     g_print("Texto ingresado: %s\n", texto);
-}
+}*/
 
+
+/*
 void nuevos_derecha(GtkButton *boton2, gpointer user_data) {
     GtkEntry *entry2 = GTK_ENTRY(user_data);       
     const gchar *texto2 = gtk_entry_get_text(entry2);
     g_print("Texto ingresado: %s\n", texto2);
+}*/
+
+
+void nuevos_izquierda(GtkButton *boton2, gpointer user_data, Config *config) {
+    GtkEntry *entry2 = GTK_ENTRY(user_data);       
+    const gchar *texto2 = gtk_entry_get_text(entry2);
+    int tipo = atoi(texto2);
+
+    if (num_carros_izquierda_actual < MAX_CARROS && tipo >= 0 && tipo <= 2) {
+        Carro *nuevo = &carros_izquierda[num_carros_izquierda_actual++];
+        nuevo->tipo = tipo;
+        nuevo->x = 100;
+        nuevo->y = altura_calle + num_carros_izquierda_actual * 30;
+
+        Config *config2;
+
+        CarroArgs *args = malloc(sizeof(CarroArgs));
+        args->carro = nuevo;
+        args->config = config2;  
+        CEthread_create(&hilo, NULL, hilo_carro, args);
+    }
+
+    gtk_widget_queue_draw(area);
 }
+
+
+
+void nuevos_derecha(GtkButton *boton, gpointer user_data, Config *config) {
+    GtkEntry *entry = GTK_ENTRY(user_data);       
+    const gchar *texto = gtk_entry_get_text(entry);
+    int tipo = atoi(texto);
+
+    if (num_carros_derecha_actual < MAX_CARROS && tipo >= 0 && tipo <= 2) {
+        Carro *nuevo = &carros_derecha[num_carros_derecha_actual++];
+        nuevo->tipo = tipo;
+        nuevo->x = ancho_ventana - 130;
+        nuevo->y = altura_calle + num_carros_derecha_actual * 30;
+
+        Config *config2;
+
+        CarroArgs *args = malloc(sizeof(CarroArgs));
+        args->carro = nuevo;
+        args->config = config2;  
+        CEthread_create(&hilo, NULL, hilo_carro, args);
+    }
+
+    gtk_widget_queue_draw(area);
+}
+
 
 
 int main(int argc, char *argv[]) {
@@ -353,6 +405,8 @@ int main(int argc, char *argv[]) {
     gtk_widget_show_all(window);
 
     crear_carro(&config);
+    
+
     gtk_main();
 
     return 0;
